@@ -214,6 +214,8 @@ button:focus-visible,label:focus-within{outline:2px solid var(--gold);outline-of
 .thlist .btn{display:flex;justify-content:space-between;align-items:center;text-align:left}
 .aucbox{padding:12px 18px 6px;display:grid;gap:8px;border-bottom:1px solid var(--line)}
 .auctit{font-size:14px;color:var(--gold);font-family:var(--f-mono)}
+.aucrow{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.aucrow .btn{padding:5px 12px;font-size:12px;font-family:var(--f-body);border-color:rgba(242,181,68,.6);color:#f6c766}
 .orders{list-style:none;margin:0;padding:0;display:grid;gap:6px}
 .orders li{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:13px}
 .orders .btn{padding:4px 10px;font-size:12px}
@@ -580,6 +582,8 @@ button:focus-visible,label:focus-within{outline:2px solid var(--gold);outline-of
 .laptop.shut .lap-lid::after{opacity:1;transition:opacity .55s ease 0s}
 .lid-card{position:absolute;left:50%;bottom:calc(16px + 14%);transform:translateX(-50%);width:min(320px,86%);padding:18px 20px;border-radius:14px;background:rgba(20,18,27,.9);border:1px solid rgba(242,181,68,.45);box-shadow:0 18px 40px rgba(0,0,0,.45);text-align:center;display:grid;gap:10px;color:var(--ink);animation:lidcard .5s ease both;z-index:5}
 .lid-card[hidden]{display:none}
+.lid-card.mini{bottom:52px;width:auto;padding:10px 16px 12px;gap:6px;border-color:rgba(255,255,255,.16)}
+.lid-card .lc-s{font-size:12px;color:#b9b4c8}
 .lid-card .eyebrow{color:#b9b4c8}
 .lid-card .lc-t{font-family:var(--f-display);font-size:28px;line-height:1.2;color:var(--life)}
 .lid-card .lc-b{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
@@ -798,6 +802,12 @@ body.atintro .watch,body.atintro .topbtns{display:none}
 .favrow{display:grid;grid-template-columns:auto 1fr;gap:8px}
 #favBtn{white-space:nowrap}#favBtn.on{color:var(--gold);border-color:var(--gold)}
 .slist .th.fav button{color:#f2c96b}
+.slist .th.lnth button{color:#f6c766}
+.slist .cd.ld{color:#d9c08c;font-family:var(--f-body);white-space:normal;line-height:1.5}
+.ctabs .kz{margin-left:auto;display:flex;align-items:center;gap:4px;font-size:12px;color:#cfcadb}
+.ctabs .kz button{width:28px;padding:3px 0;text-align:center;font-size:14px;line-height:1.2;color:#e6e1ef}
+.ctabs .kz button:disabled{opacity:.35;cursor:default}
+.ctabs .kz span{min-width:54px;text-align:center;font-family:var(--f-mono)}
 .favhint{padding:8px 14px 10px 30px;font-size:12px;color:#8f89a0;line-height:1.6}
 .stlist{display:grid;gap:4px;max-height:46vh;overflow-y:auto;margin:6px 0}
 .stli{display:grid;grid-template-columns:1fr auto 22px;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;background:rgba(255,255,255,.04);text-align:left}
@@ -1584,7 +1594,7 @@ function genHistory(){
 function startDay(){
   const d=S.day;
   S.refocusLeft=0; S.sitMin=0; S.awayFromStudy=false; S.studyBreak=false; S.brokeToday=false; S.cryUntil=-1; S.noStudyToday=false; S.paused=false; S.frozen=false; S.focusSess=0; S.tomToday=0; S.tomLog=[]; S.flow=0; S.qSum=0; S.qN=0; S.lastQ=null; S.postsToday=0; S.itStart={proj:S.it.proj,emails:S.it.emails};
-  S.minute=0; S.hrMax=0; S.hrMaxAt=""; S.hrMaxApp=""; S.fast=false; S.todayStudy=0; S.todayEff=0; S.todayViolated=false; S.dayHaltBreached=false; S.hasClass=S.classDays.has(d); S.loc=S.hasClass?"class":"library"; S.stockStreak=0;
+  S.dayPeak=0; S.flipped=false; S.minute=0; S.hrMax=0; S.hrMaxAt=""; S.hrMaxApp=""; S.fast=false; S.todayStudy=0; S.todayEff=0; S.todayViolated=false; S.dayHaltBreached=false; S.hasClass=S.classDays.has(d); S.loc=S.hasClass?"class":"library"; S.stockStreak=0;
   if(S.rate.on && S.rate.plan==="month" && d>S.rate.since && (d-S.rate.since)%20===0){ S.cash-=500; S.rate.paid+=500; }   // 月费续费
   // 大盘
   const st=S.world.reg[d]||"平淡", R=REGIMES[st], idxRet=R.drift+R.vol*gauss(), volState=S.world.vols[d]||"平量";
@@ -1834,6 +1844,11 @@ const LINE_T={
 };
 const LINE_F={buy:{0.25:"¼",0.5:"½",1:"全仓"},sell:{0.5:"½",1:"全部"}};
 let KSC=null;   // 画线模式下日K的坐标，用来把鼠标位置换成价格
+const KZ=[60,30,15,8];   // 画线时日K可以放大：近 60 / 30 / 15 / 8 个交易日
+function kZoomStep(d){ const i=Math.max(0,Math.min(KZ.length-1,KZ.indexOf(S.kZoom||60)+d)); S.kZoom=KZ[i];
+  const l=$("#kzL"); if(l) l.textContent=`近 ${S.kZoom} 日`;
+  document.querySelectorAll("[data-kz]").forEach(b=>b.disabled=(+b.dataset.kz>0? i===KZ.length-1 : i===0));
+  drawChart(stock(S.sel)); }
 const canDraw=()=>S.phase==="pre"||S.phase==="market";
 const todayLines=code=>(S.lines||[]).filter(l=>l.day===S.day&&l.st!=="cancel"&&(!code||l.code===code));
 const limUpPx=s=>Math.floor(s.prev*1.2*100+1e-6)/100, limDnPx=s=>Math.ceil(s.prev*0.8*100-1e-6)/100;
@@ -1893,7 +1908,7 @@ function renderDrawBox(){
   if(!canDraw()){ el.innerHTML=`<div class="dl-h">${S.phase==="auction"?"集合竞价中。画好的线 9:30 开盘后开始生效。":"收盘了。今天画的线已经作废，明天开盘前再来画。"}</div>`; return; }
   if(s.delisted){ el.innerHTML=`<div class="dl-h">${esc(s.name)} 已退市，不能画线。</div>`; return; }
   const pl=S.pendLine&&S.pendLine.code===s.code?S.pendLine:null;
-  if(!pl){ el.innerHTML=`<div class="dl-h">在图上<b>按住、上下拖</b>，定一个今天的价格；松手后选碰到这条线时做什么。</div><div class="small">只看今天的最高价、最低价有没有碰到线：碰到就按线价自动成交，不用一直盯着，画完可以去学习。线只在今天有效。</div>`; return; }
+  if(!pl){ el.innerHTML=`<div class="dl-h">在图上<b>按住、上下拖</b>，定一个今天的价格；松手后选碰到这条线时做什么。</div><div class="small">只看今天的最高价、最低价有没有碰到线：碰到就按线价自动成交，不用一直盯着，画完可以去学习。线只在今天有效。图右上角的 ＋ 或鼠标滚轮可以放大最近几天的K线，画得更准。</div>`; return; }
   const up=pl.px>=s.price, bt=up?"brk":"dip", st=up?"tp":"sl", B=LINE_T[bt], X=LINE_T[st], h=S.hold[s.code], sellable=h?h.qty-(h.todayQty||0):0;
   const lu=limUpPx(s), ld=limDnPx(s), w=[];
   if(up&&pl.px>=lu-0.005) w.push("线就在涨停价上：碰到的时候多半已经封板，买单只能排队。");
@@ -1922,6 +1937,7 @@ function bindDraw(cv){
   const end=()=>{ if(drag){ drag=false; renderDrawBox(); } };
   cv.addEventListener("pointerup",end); cv.addEventListener("pointercancel",end);
   cv.addEventListener("pointerleave",()=>{ if(!drag){ S.hoverY=null; drawChart(stock(S.sel)); } });
+  let wacc=0; cv.addEventListener("wheel",e=>{ e.preventDefault(); wacc+=e.deltaY; if(Math.abs(wacc)>=60){ kZoomStep(wacc<0?1:-1); wacc=0; } },{passive:false});   // 滚轮放大、缩小
 }
 
 /* 在自习里坐的每一分钟，真正学进去多少，取决于专注力、睡眠和压力；盘前、竞价、盘中都算 */
@@ -2019,22 +2035,35 @@ function tickMinute(){
   convTick();
   const a = ["stock","study","chat","social","news","comm"].includes(S.app)? S.app : "home";
   S.appTime[a]++;
+  if(!S.ffEndOn&&S.appTime.stock>=FF_END_MIN){ S.ffEndOn=true; setTimeout(()=>{ toast("累计看盘满 20 小时。看盘页面可以直接快进到收盘了。"); if(S.app==="stock"&&S.phase==="market") reStock(); },200); }
   if(S.fast){S.skipped++; }
-  if(a==="stock"){ const dp=equity()-S.openEquity, r=Math.abs(dp)/DAILY_INCOME; S.stress += (S.fast?0.016:0.01) + 0.006*Math.log(1+r)*(S.fast?1.5:1)*(dp<0?1.6:0.7); }   // 看着亏比看着赚难受得多
+  { const dp=equity()-S.openEquity, r=Math.abs(dp)/DAILY_INCOME; S.dayPeak=Math.max(S.dayPeak||0,dp);
+    if(!S.flipped && dp<0 && S.dayPeak>=DAILY_INCOME){   // 今天赚过至少一天生活费，现在翻成了亏
+      S.flipped=true; S.stress+=6*stressAmp(); hrKick(18);
+      const msg=`刚才还赚着 ${fmt(S.dayPeak)}，现在倒亏 ${fmt(-dp)}。`;
+      if(a==="stock"){ toast(msg); sfx("down"); } else showBanner("涨","涨涨证券",`今日盈亏翻绿了：${msg}`,"stock"); }
+    if(a==="stock"){
+      if(dp>=0) S.stress-=0.003*Math.log(1+r)*(S.fast?1.5:1);   // 看着赚钱：压力不涨，还会松一点
+      else { const fl=S.flipped? 2.5+2.5*Math.min(1,(S.dayPeak-dp)/DAILY_INCOME/3) : 1;   // 赚过又亏回去：比一直亏难受得多
+        S.stress+=((S.fast?0.016:0.01)+0.006*Math.log(1+r)*(S.fast?1.5:1)*1.6)*fl; } } }   // 看着亏比看着赚难受得多
   if(a==="study") studyMinute();
   if(a==="stock"&&S.minute%30===0) habitAdd(-0.025);
   if(a==="stock" && S.loc==="class"){ if(++S.stockStreak>=120){ S.loc="dorm"; toast("你从教室溜回了宿舍"); } } else S.stockStreak=0;
-  S.stress=Math.min(stressCap(),S.stress);
+  S.stress=Math.max(0,Math.min(stressCap(),S.stress));
   S.stocks.forEach(s=>s.price=s.path[S.minute]); S.index.val=S.index.path[S.minute];
   processQueue(); checkLines(false); glowKick=1;
   // 杠杆强平
   if(levNow()>1 && posValue()>0 && equity()<posValue()*({2:0.3,5:0.13,10:0.07}[levNow()]||0.3)){
-    const wasPz=!!S.pz;
-    Object.keys(S.hold).forEach(c=>{const h=S.hold[c],s=stock(c),g=h.qty*s.price,fe=fee(g);S.cash+=g-fe;S.fees+=fe;S.sells.push({day:S.day,pnl:(s.price-h.cost)*h.qty-fe,viol:true});
-      h.realized=(h.realized||0)+(s.price-h.cost)*h.qty-fe; h.soldQty=(h.soldQty||0)+h.qty; h.sellAmt=(h.sellAmt||0)+g; recordClear(s,h,"强制平仓");});
-    S.hold={}; S.liquidated=wasPz?"pz":"margin"; S.stress=Math.min(stressCap(),S.stress+(wasPz?35:25));
-    if(wasPz){ S.pzBurned=S.day; S.pz=null; S.creditLine=S.leverage?Math.max(0,equity()):0; }
-    showBanner(wasPz?"倍":"涨",wasPz?"倍增宝":"涨涨证券",wasPz?"账户跌破平仓线，已强制平仓，配资合作终止。":"维持担保比例不足，已强制平仓。","stock");
+    // 强平也受 T+1 限制：只能卖掉今天之前买的；今天买的要等明天开盘
+    const canSell=Object.entries(S.hold).some(([c,h])=>h.qty-(h.todayQty||0)>0);
+    if(canSell){
+    const wasPz=!!S.pz; let kept=0;
+    Object.keys(S.hold).forEach(c=>{const h=S.hold[c],s=stock(c),q=h.qty-(h.todayQty||0); if(q<=0){ kept+=h.qty; return; } const g=q*s.price,fe=fee(g);S.cash+=g-fe;S.fees+=fe;S.sells.push({day:S.day,pnl:(s.price-h.cost)*q-fe,viol:true});
+      h.realized=(h.realized||0)+(s.price-h.cost)*q-fe; h.soldQty=(h.soldQty||0)+q; h.sellAmt=(h.sellAmt||0)+g; h.qty-=q; kept+=h.qty; if(!h.qty){ recordClear(s,h,"强制平仓"); delete S.hold[c]; } });
+    S.liquidated=wasPz?"pz":"margin"; S.stress=Math.min(stressCap(),S.stress+(wasPz?35:25));
+    if(wasPz){ S.pzBurned=S.day; S.pzBurns=(S.pzBurns||0)+1; S.pz=null; S.creditLine=S.leverage?Math.max(0,equity()):0; }
+    showBanner(wasPz?"倍":"涨",wasPz?"倍增宝":"涨涨证券",(wasPz?"账户跌破平仓线，已强制平仓。":"维持担保比例不足，已强制平仓。")+(kept?`今天买入的 ${kept} 股受 T+1 限制卖不了，明天开盘再处理。`:""),"stock");
+    }
   }
   // 推送诱惑
   if(S.app!=="stock"){
@@ -2060,6 +2089,7 @@ function tickMinute(){
   if(S.day===8 && S.minute===70 && !S.dca.opened) showBanner("定","定投小助手","每周 ¥100，不用看盘。","dca",true);
   if(S.minute%5===0) checkBreakdown();
   if(S.minute>=MINUTES){closeMarket();return}
+  if(S.skipClose) return;   // 快进到收盘的途中不逐分钟重画
   updateChrome();
   if(S.app==="stock") renderStockLive();
   if(S.app==="study") renderStudyLive();
@@ -2176,6 +2206,7 @@ let toastT;
 function toast(t){const el=$("#toast");el.textContent=NM(t);el.classList.add("show");clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove("show"),2200)}
 let bannerT, bannerTarget;
 function showBanner(ic,src,text,target,isDca){
+  if(S&&S.skipClose) return;
   const b=$("#banner"); bannerTarget=target; sfx(target==="chat"?"msg":"notify"); if(target==="stock") hrKick(/涨停|跌停|跳水|拉升/.test(text)?14:7); else hrKick(2);
   b.innerHTML=`<span class="ic" style="background:${isDca?"#cfd6cf":"var(--gold)"};color:#222">${esc(ic)}</span><span><span class="src">${esc(src)} · 现在</span><br>${esc(NM(text))}</span>`;
   b.classList.add("show"); clearTimeout(bannerT);
@@ -2193,12 +2224,13 @@ const PHONE_CLS=new Set(["chat","social","album","lock","phome","pfocus","pintro
 const PHONE_SIDE=new Set(["chat","social","album","phone","shop","loan","pz"]);
 const APP_NAME={home:"桌面",stock:"涨涨证券",study:"专注",news:"财讯",comm:"股友社区",store:"应用商店",intro:"大三下的好时候",lapsleep:""};
 function setView(html,cls){ const ph=PHONE_CLS.has(cls), v=$(ph?"#pview":"#view"); v.className="view "+(cls||""); v.innerHTML=NM(html); v.scrollTop=0;
-  if(!ph){ const n=$("#mb-app"); if(n) n.textContent=(S&&DAYPH.includes(S.phase)&&S.lapApp)? (APP_NAME[S.lapApp]||"桌面") : (APP_NAME[cls]||"大三下的好时候"); } }
+  if(!ph){ const n=$("#mb-app"); if(n) n.textContent=(S&&DAYPH.includes(S.phase)&&S.lapApp)? (APP_NAME[S.lapApp]||"桌面") : (APP_NAME[cls]||"大三下的好时候"); lidAuto(cls); } }
 function phoneBack(){ openApp("phone"); }
 /* 放下手机、回到电脑：学习要重新进入专注，开户问卷要重新弹出；其他程序只是把注意力挪回来，不重画，点击照常生效 */
 function focusLaptop(){
   if(!S||!DAYPH.includes(S.phase)||!PHONE_SIDE.has(S.app)) return false;
   const a=S.lapApp||"home";
+  if(lidWant===false&&!S.ended){ openApp(a); return true; }
   if(a==="study"||(a==="stock"&&!S.accountOpen)){ openApp(a); return true; }
   S.app=a; S.slowT=performance.now();
   renderPhoneHome(); renderDock(); updateChrome();
@@ -2214,9 +2246,9 @@ $("#screen").addEventListener("pointerdown",e=>{
 $("#screen").addEventListener("click",e=>{ if(performance.now()-swallowT<600){ swallowT=0; e.preventDefault(); e.stopPropagation(); } },true);
 
 /* ============ 翻盖：开局时翻开，结局时合上 ============ */
-let lidT=0;
+var lidT=0, lidWant=null;
 function lidSet(open,done,delay){
-  const L=$("#laptop"); clearTimeout(lidT);
+  const L=$("#laptop"); clearTimeout(lidT); lidWant=!!open;
   if(!L){ if(done) done(); return; }
   const ms=matchMedia("(prefers-reduced-motion: reduce)").matches?80:1350;
   lidT=setTimeout(()=>{
@@ -2227,10 +2259,24 @@ function lidSet(open,done,delay){
     lidT=setTimeout(()=>{ lidT=0; if(done) done(); }, already?0:ms);
   },delay||0);
 }
+/* 电脑上换了画面：「电脑还合着」就合上，其他画面就翻开（结局之后不再自动翻开） */
+function lidAuto(cls){
+  if(!S) return;
+  if(cls==="lapsleep"){ if(lidWant===false) showOpenBtn(); else lidSet(false,showOpenBtn,350); return; }
+  if(S.ended||lidWant===true) return;
+  lidSet(true);
+}
+/* 合着的电脑前放一个「翻开电脑」 */
+function showOpenBtn(){
+  const c=$("#lidCard"); if(!c||!S||S.ended) return;
+  c.className="lid-card mini"; c.innerHTML=`<div class="lc-s">电脑还合着</div><button class="btn primary" type="button" id="lapOpen">翻开电脑</button>`;
+  c.onclick=e=>{ if(!e.target.closest("#lapOpen")) return; const u=$("#unl"); if(S.phase==="lock"&&u) u.click(); else openApp(S.lapApp||"home"); };
+  c.hidden=false;
+}
 /* 结局：屏幕上留一句话，合上电脑，再把报告铺开；合上的电脑上放「再看一遍 / 再来一次」 */
 function endLid(title,showRep,again){
   const c=$("#lidCard");
-  if(c){ c.innerHTML=`<div class="eyebrow">二十天过去了</div><div class="lc-t">${esc(title)}</div><div class="lc-b"><button class="btn primary" type="button" data-lc="rep">再看一遍</button><button class="btn" type="button" data-lc="again">再来一次</button></div>`;
+  if(c){ c.className="lid-card"; c.innerHTML=`<div class="eyebrow">${S.collapsed?`第 ${S.day} 天`:"二十天过去了"}</div><div class="lc-t">${esc(title)}</div><div class="lc-b"><button class="btn primary" type="button" data-lc="rep">再看一遍</button><button class="btn" type="button" data-lc="again">再来一次</button></div>`;
     c.onclick=e=>{ const b=e.target.closest("[data-lc]"); if(!b) return; if(b.dataset.lc==="rep") showRep(); else again(); }; }
   lidSet(false,()=>{ if(c) c.hidden=false; showRep(); },500);
 }
@@ -2470,7 +2516,18 @@ function startPre(){
   };
   preTimer=setTimeout(step,preDelay());
 }
+const FF_END_MIN=1200;   // 累计看盘 20 小时
+function skipToClose(){
+  if(S.phase!=="market"||S.paused||S.frozen) return;
+  const m0=S.minute; S.fast=true; S.skipClose=true;
+  try{ while(S.phase==="market"&&S.minute<MINUTES&&!S.paused) tickMinute(); } finally { S.skipClose=false; }
+  if(S.phase==="market") { S.fast=false; renderStockLive(true); }
+  S.closeSkips=(S.closeSkips||0)+1;
+  setTimeout(()=>toast(`⏭ 快进了 ${hrs(S.minute-m0)} 小时${S.phase==="market"?"，停在了 "+clockStr(S.minute):" · 已经收盘"}`),300);
+}
 function skipPre(){ const m=63-S.preMin; clearInterval(preTimer); startAuction(); openApp(S.app==="lock"?"home":S.app); clkCue(`⏩ 跳过了 ${m} 分钟 · 现在 9:15`); }
+/* 跳过集合竞价：竞价按最终价格撮合，直接到 9:30 开盘 */
+function skipAuction(){ if(S.phase!=="auction") return; clearTimeout(aucTimer); aucTimer=null; S.aucMin=10; endAuction(); }
 
 /* 前一天越热、周期越大，第二天早上的推送就越大越强烈；正文仍要点开 App 才能看到 */
 function heatPushes(d){
@@ -2521,7 +2578,7 @@ function renderLock(){
     ${items.map(n=>`<div class="notif"><span class="ic" style="background:${n.c};color:#fff">${esc(n.ic)}</span><span><span class="src">${esc(n.src)}</span><br>${esc(n.t)}</span></div>`).join("")}
     ${storeHtml}${hotPush.html}
     ${dcaHtml}
-    ${S.installed.stock&&(S.watchStreak||0)>=2?`<button class="unlock ffauc" id="ffAuc" type="button">⏩ 直接快进到 9:15 集合竞价<small>你已经连续 ${S.watchStreak} 天盯盘了</small></button>`:""}
+    ${S.installed.stock?`<button class="unlock ffauc" id="ffAuc" type="button">⏩ 直接快进到 9:15 集合竞价<small>${(S.watchStreak||0)>=2?`你已经连续 ${S.watchStreak} 天盯盘了`:"跳过早上，打开涨涨证券等竞价"}</small></button>`:""}
     <button class="unlock" id="unl" type="button">轻点解锁</button>`,"lock");
   document.querySelectorAll("[data-push]").forEach(b=>b.onclick=()=>{ if(d===3) S.marginOffered=true; startPre(); openApp(b.dataset.push); });
   if($("#dcaN")) $("#dcaN").onclick=openDca;
@@ -2583,7 +2640,7 @@ function renderHome(){
   setView(`<div class="desk-wid">
       <div class="dw-clock"><div class="num" id="dw-time"></div><div id="dw-date">${esc(dwDate())}</div></div>
       <div class="dw-card">
-        ${S.phase==="pre"?`<div class="hd"><span id="pre-left">${63-S.preMin} 分钟后${I.stock?"开始集合竞价":"出门"}</span><button class="btn" id="skippre" type="button">${I.stock?"直接进入竞价":"跳过早上"}</button></div>`:""}
+        ${S.phase==="pre"?`<div class="hd"><span id="pre-left">${63-S.preMin} 分钟后${I.stock?"开始集合竞价":"出门"}</span><button class="btn" id="skippre" type="button">${I.stock?"直接进入竞价":"跳过早上"}</button></div>`:S.phase==="auction"&&I.stock?`<div class="hd"><span>集合竞价中 · 9:30 开盘</span><button class="btn" id="skipauc" type="button">跳过竞价，直接开盘</button></div>`:""}
         <div class="small" id="hw-st">${homeStatus()}</div>
         <div class="hd"><span>考研 · ${esc(S.major.name)}</span><span class="num" id="hw-s"></span></div>
         <div class="bar"><i id="hw-sb" style="width:${S.study}%"></i></div>
@@ -2597,6 +2654,7 @@ function renderHome(){
       <div class="dw-hint">${I.stock?"下面是电脑上的程序。打开「专注」，时间才算花在学习上；打开「涨涨证券」，时间就花在盘面上。手机在右边，消息和圈子都在那里。":"下面是电脑上的程序。打开「专注」开始学习；手机在右边，消息和圈子都在那里。"}</div>
     </div>`,"home");
   if($("#skippre")) $("#skippre").onclick=skipPre;
+  if($("#skipauc")) $("#skipauc").onclick=skipAuction;
   renderHomeLive();
 }
 function dwDate(){ return `周${WEEKDAY[(S.day-1)%5]} · 大三下第 ${S.day} 天 · ${S.hasClass?"今天有课":"今天没课"}`; }
@@ -2648,7 +2706,7 @@ function renderPhoneFocus(){
   $("#ph-pick").onclick=()=>openApp("phone");
   renderStudyLive();
 }
-function lapSleep(t){ setView(`<div class="num">${esc(t||"8:12")}</div><div>电脑还合着</div>${S.phase==="lock"?`<button class="btn" id="lapOpen" type="button">翻开电脑</button>`:""}`,"lapsleep"); renderDock(); const b=$("#lapOpen"); if(b) b.onclick=()=>{ const u=$("#unl"); if(u) u.click(); }; }
+function lapSleep(t){ setView(`<div class="num">${esc(t||"8:12")}</div><div>电脑还合着</div>`,"lapsleep"); renderDock(); }
 function homeStatus(){ if(S.phase==="after") return `${S.installed.stock?"收盘后":"下课了"} · ${clockStr(MINUTES+(S.afterMin||0))} · 离晚上还有 ${30-(S.afterMin||0)} 分钟，回回消息、看看圈子`; return S.phase==="pre"?(S.installed.stock?"盘前 · 消息都在「财讯」和「股友社区」里，不点开就看不到":"早上 · 还没出门"):S.phase==="auction"?(S.installed.stock?`开盘前 · 集合竞价中，9:30 ${S.hasClass?"上课":"开盘"}`:`9:30 ${S.hasClass?"上课":"图书馆开门"}`):`今天 · ${clockStr(S.minute)} · ${S.hasClass?`第 ${Math.min(5,1+Math.floor(S.minute/66))} 节课`:"没课，图书馆自习"}`; }
 function renderHomeLive(){ const hp=$("#hw-plan"); if(hp){ const t=planLine(); if(hp.textContent!==t) hp.textContent=t; } const dt=$("#dw-time"); if(dt) dt.textContent=$("#sb-time").textContent; const ht=$("#hw-tom"); if(ht) ht.textContent=`${S.tomToday} 个${S.flow?` · 心流 ×${S.flow}`:""}`; renderIdxWidget(); const pc=$("#ph-clock"); if(pc) pc.textContent=$("#pb-time").textContent; const st=$("#hw-st"); if(st){ const t=homeStatus(); if(st.textContent!==t) st.textContent=t; } const e=$("#hw-s"); if(e){const p=kyProgress(); e.textContent=p.ch<S.ky.totalCh?`一轮 ${p.ch}/${S.ky.totalCh} 章`:p.q<S.ky.qTotal?`二轮 ${p.q}/${S.ky.qTotal} 题`:`三轮 ${p.pp}/${S.ky.pTotal} 套`; $("#hw-sb").style.width=S.study+"%";}}
 function internLabel(){return {closed:"已截止",interview:"等待面试",offer:"已拿到 offer",missed:"错过了",failed:"面试没过"}[S.internState]||""}
@@ -2697,10 +2755,10 @@ function renderStock(){
       ${S.rate.on?"":`<button class="btn" id="unlockRate" type="button" style="grid-column:1/-1;padding:7px;font-size:12px;border-color:var(--gold);color:var(--gold)">🔒 解锁业绩评级</button>`}
     </div>
     <div class="idx"><span>综合指数</span><span class="num" id="k-idx"></span></div>
-    ${S.phase==="pre"?`<div class="aucbox"><div class="auctit">盘前 · 9:15 开始集合竞价</div><p class="small">现在可以预埋单：选好股票和委托价，点下面的买卖按钮，9:15 自动报入集合竞价；9:20 之前都能撤。</p>${aucBox()}</div>`:""}
-    <ul class="slist" id="slist">${favRows()}${S.watch.map(k=>{const n=S.stocks.filter(s=>s.theme===k).length, op=S.open.has(k); return `<li class="th"><button type="button" data-t="${k}" aria-expanded="${op}"><span><i class="chev">${op?"▾":"▸"}</i>${TH(k).name}${TH(k).isNew?`<em class="new">新</em>`:""}<span class="cnt">${n} 只</span></span><span class="num" id="tc-${k}"></span></button></li>`+S.stocks.filter(s=>s.theme===k).map(s=>`<li data-g="${k}" ${op?"":"hidden"}><button type="button" data-c="${s.code}"><span><div class="nm">${s.name}</div><div class="cd">${s.code} · 评级 ${S.rate.on?s.rating:"🔒"}${s.bad?" · 连续亏损":""}${s.delisted?" · 已退市":""}</div></span><span class="px" id="px-${s.code}"></span><span class="pc" id="pc-${s.code}"></span></button></li>`).join("")}).join("")}
+    ${S.phase==="pre"?`<div class="aucbox"><div class="auctit aucrow"><span>盘前 · 9:15 开始集合竞价</span><button class="btn" id="ffpre" type="button">⏩ 快进到 9:15</button></div><p class="small">现在可以预埋单：选好股票和委托价，点下面的买卖按钮，9:15 自动报入集合竞价；9:20 之前都能撤。</p>${aucBox()}</div>`:""}
+    <ul class="slist" id="slist">${lineGroupRows()}${favRows()}${S.watch.map(k=>{const n=S.stocks.filter(s=>s.theme===k).length, op=S.open.has(k); return `<li class="th"><button type="button" data-t="${k}" aria-expanded="${op}"><span><i class="chev">${op?"▾":"▸"}</i>${TH(k).name}${TH(k).isNew?`<em class="new">新</em>`:""}<span class="cnt">${n} 只</span></span><span class="num" id="tc-${k}"></span></button></li>`+S.stocks.filter(s=>s.theme===k).map(s=>`<li data-g="${k}" ${op?"":"hidden"}><button type="button" data-c="${s.code}"><span><div class="nm">${s.name}</div><div class="cd">${s.code} · 评级 ${S.rate.on?s.rating:"🔒"}${s.bad?" · 连续亏损":""}${s.delisted?" · 已退市":""}</div></span><span class="px" id="px-${s.code}"></span><span class="pc" id="pc-${s.code}"></span></button></li>`).join("")}).join("")}
       <li><button type="button" class="addth" id="addth">＋ 添加板块</button></li><li><button type="button" class="addth" id="addst">＋ 搜索股票，加入自选</button></li></ul>
-    ${S.phase==="pre"?`<div class="chartbox${DR?" drawing":""}"><canvas id="cv" width="360" height="150" aria-label="${DR?"日K 画线":"分时图"}"></canvas></div>${dbox}`:S.phase==="auction"?`<div class="aucbox"><div class="auctit" id="auc-st"></div>
+    ${S.phase==="pre"?`<div class="chartbox${DR?" drawing":""}"><canvas id="cv" width="360" height="150" aria-label="${DR?"日K 画线":"分时图"}"></canvas></div>${dbox}`:S.phase==="auction"?`<div class="aucbox"><div class="aucrow"><span class="auctit" id="auc-st"></span><button class="btn" id="ffauc2" type="button">⏩ 跳过竞价，直接开盘</button></div>
       <p class="small">9:15–9:20 可以挂单、撤单；9:20–9:25 只能挂单，不能撤单；9:25 撮合出开盘价：「开盘价成交」一定成交，限价买单要高于开盘价、限价卖单要低于开盘价才成交，没成交的自动撤单。前五分钟的竞价价格常常是虚的。</p>
       ${aucBox()}</div>`
     :`<div class="chartbox${DR?" drawing":""}"><canvas id="cv" width="360" height="150" aria-label="${DR?"日K 画线":"行情图"}"></canvas></div>${dbox}`}
@@ -2713,7 +2771,7 @@ function renderStock(){
       <button class="s" data-k="sell" data-f="0.5" type="button">卖 ½</button><button class="s" data-k="sell" data-f="1" type="button" style="grid-column:span 2">卖出全部可卖</button>
     </div>
     ${offerMargin?`<div class="pad" style="padding-top:8px;padding-bottom:0"><button class="btn" id="mg" type="button" style="width:100%;border-color:var(--gold);color:var(--gold)">开通融资：购买力翻倍</button></div>`:""}
-    <div class="ff" ${S.phase!=="market"?"hidden":""}><button class="btn" id="ffb" type="button">⏩ 加速看盘</button><span class="small" id="ffh"></span></div>`,"stock");
+    <div class="ff" ${S.phase!=="market"?"hidden":""}><button class="btn" id="ffb" type="button">⏩ 加速看盘</button>${S.appTime.stock>=FF_END_MIN?`<button class="btn" id="ffend" type="button" title="累计看盘满 20 小时后解锁">⏭ 快进到收盘</button>`:""}<span class="small" id="ffh"></span></div>`,"stock");
   $("#bk").onclick=()=>openApp("home"); bindStockTabs();
   $("#slist").onclick=e=>{
     const t=e.target.closest("button[data-t]");
@@ -2728,14 +2786,19 @@ function renderStock(){
   document.querySelectorAll(".trade button").forEach(b=>b.onclick=()=> (S.phase==="pre"||S.phase==="auction")? placeAuction(b.dataset.k,+b.dataset.f) : trade(b.dataset.k,+b.dataset.f));
   document.querySelectorAll("[data-apx]").forEach(b=>b.onclick=()=>{ S.aucPx=b.dataset.apx; renderStock(); });
   document.querySelectorAll("[data-oid]").forEach(b=>b.onclick=()=>cancelOrder(b.dataset.oid));
+  if($("#ffpre")) $("#ffpre").onclick=skipPre;
+  if($("#ffauc2")) $("#ffauc2").onclick=skipAuction;
   $("#ffb").onclick=()=>{S.fast=!S.fast; renderStockLive(true);};
+  if($("#ffend")) $("#ffend").onclick=skipToClose;
   $("#queue").onclick=e=>{ const b=e.target.closest("[data-q]"); if(b) cancelQueue(b.dataset.q); };
   const cvh=$("#cv"); if(cvh&&DR) bindDraw(cvh); else if(cvh){ const mv=e=>{ const r=cvh.getBoundingClientRect(), x=(e.touches?e.touches[0].clientX:e.clientX)-r.left; S.hoverX=x; drawChart(stock(S.sel)); };
     cvh.addEventListener("mousemove",mv); cvh.addEventListener("touchmove",mv,{passive:true});
     const off=()=>{ S.hoverX=null; drawChart(stock(S.sel)); }; cvh.addEventListener("mouseleave",off); cvh.addEventListener("touchend",off); }
   const cb=document.querySelector(".chartbox"); if(cb){ const t=document.createElement("div"); t.className="ctabs"; const cm=S.chartMode||"min";
-    t.innerHTML=`<button type="button" data-cm="min" class="${cm==="min"?"on":""}">分时</button><button type="button" data-cm="day" class="${cm==="day"?"on":""}">日K · 近 60 日</button><button type="button" data-cm="draw" class="${cm==="draw"?"on":""}">✎ 画线下单${S.lineSeen?"":`<em class="new">新</em>`}</button>`; cb.prepend(t);
-    t.onclick=e=>{const b=e.target.closest("[data-cm]"); if(!b) return; const was=S.chartMode; S.chartMode=b.dataset.cm; if(S.chartMode==="draw") S.lineSeen=true;
+    const zi=KZ.indexOf(S.kZoom||60);
+    t.innerHTML=`<button type="button" data-cm="min" class="${cm==="min"?"on":""}">分时</button><button type="button" data-cm="day" class="${cm==="day"?"on":""}">日K · 近 60 日</button><button type="button" data-cm="draw" class="${cm==="draw"?"on":""}">✎ 画线下单${S.lineSeen?"":`<em class="new">新</em>`}</button>`+
+      (DR?`<span class="kz"><button type="button" data-kz="-1" aria-label="缩小K线" ${zi===0?"disabled":""}>－</button><span id="kzL">近 ${S.kZoom||60} 日</span><button type="button" data-kz="1" aria-label="放大K线" ${zi===KZ.length-1?"disabled":""}>＋</button></span>`:""); cb.prepend(t);
+    t.onclick=e=>{const z=e.target.closest("[data-kz]"); if(z){ kZoomStep(+z.dataset.kz); return; } const b=e.target.closest("[data-cm]"); if(!b) return; const was=S.chartMode; S.chartMode=b.dataset.cm; if(S.chartMode==="draw") S.lineSeen=true;
       if(was==="draw"||S.chartMode==="draw"){ S.pendLine=null; S.hoverY=null; reStock(); return; }
       t.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b)); renderStockLive(true);}; }
   renderDrawBox();
@@ -2775,7 +2838,7 @@ function renderStockLive(full){
   const ic=S.index.val/S.index.prev-1, ki=$("#k-idx"); ki.textContent=`${S.index.val.toFixed(2)}  ${pct(ic)}`; ki.className="num "+(ic>0?"up":ic<0?"down":"");
   S.watch.forEach(k=>{const e=$("#tc-"+k); if(!e) return; const c=themeChg(k); e.textContent="板块 "+pct(c); e.className="num "+(c>0?"up":c<0?"down":"");});
   S.stocks.forEach(s=>{
-    for(const pre of ["","f"]){
+    for(const pre of ["","f","l"]){
       const px=$("#"+pre+"px-"+s.code); if(!px) continue;
       const c=dayChg(s); px.textContent=s.price.toFixed(2);
       const pc=$("#"+pre+"pc-"+s.code), lu=S.phase==="market"&&isLimUp(s), ld=S.phase==="market"&&isLimDn(s);
@@ -2791,6 +2854,8 @@ function renderStockLive(full){
   const qe=$("#queue"); if(qe) qe.innerHTML=S.queue.map(o=>{ const t=stock(o.code), buy=o.kind==="buy", px=buy?t.prev*1.2:t.prev*0.8, waited=S.minute-o.minute;
     return `<div class="qi ${o.kind}"><span>排队${buy?"买入":"卖出"} ${t.name} · ${buy?"涨停价":"跌停价"} ${px.toFixed(2)} · 已排 ${waited} 分钟${(buy?isLimUp(t):isLimDn(t))?` · 前面还有约 ${fengDan(t)>=10000?(fengDan(t)/10000).toFixed(1)+" 万":fengDan(t)} 手`:""}</span><button class="btn" type="button" data-q="${o.id}">撤单</button></div>`; }).join("");
   const le=$("#lines"); if(le){ const lh=lineRows(); if(le._h!==lh){ le._h=lh; le.innerHTML=lh; } }
+  todayLines().forEach(l=>{ const e=$("#ld-"+l.code); if(e){ const t=lineBrief(l.code); if(e.textContent!==t) e.textContent=t; } });
+  const lw=$("#lnwait"); if(lw){ const n=todayLines().filter(l=>l.st==="wait").length, t=n?`${n} 条线在等`:""; if(lw.textContent!==t) lw.textContent=t; }
   const as=$("#auc-st"); if(as){ as.textContent = `集合竞价 9:${15+Math.min(S.aucMin,14)} · ${S.aucMin<5?"可以撤单":"不能撤单"} · 下方价格为竞价匹配价`; if(S.aucMin>=5) document.querySelectorAll("[data-oid]").forEach(b=>b.disabled=true);
     const cb=document.querySelector('[data-apx="cur"]'), cs=S.sel&&stock(S.sel); if(cb&&cs){ const t="现价 "+cs.price.toFixed(2); if(cb.textContent!==t) cb.textContent=t; } }
   const ff=$("#ffb"); ff.classList.toggle("on",S.fast); ff.textContent=S.fast?"⏩ 加速中 ×4":"⏩ 加速看盘";
@@ -2802,21 +2867,23 @@ function drawKChart(s){
   const DR=S.chartMode==="draw", dpr=window.devicePixelRatio||1, w=cv.clientWidth||360, h=DR?220:150;
   if(cv.width!==Math.round(w*dpr)||cv.height!==Math.round(h*dpr)){cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);}
   const g=cv.getContext("2d"); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,w,h);
-  let ks=s.k.slice(-60);
-  if(S.phase==="market"&&!s.delisted){ const p=s.path.slice(0,S.minute+1); ks=[...ks.slice(-59),{o:p[0],h:Math.max(...p),l:Math.min(...p),c:s.price,v:0,today:true}]; }
-  else if(DR&&(S.phase==="pre"||S.phase==="auction")&&!s.delisted) ks=[...ks.slice(-59),{empty:true,today:true}];   // 盘前：今天这根K线还是空的
+  const Z=DR?(S.kZoom||60):60;
+  let ks=s.k.slice(-Z);
+  if(S.phase==="market"&&!s.delisted){ const p=s.path.slice(0,S.minute+1); ks=[...ks.slice(-(Z-1)),{o:p[0],h:Math.max(...p),l:Math.min(...p),c:s.price,v:0,today:true}]; }
+  else if(DR&&(S.phase==="pre"||S.phase==="auction")&&!s.delisted) ks=[...ks.slice(-(Z-1)),{empty:true,today:true}];   // 盘前：今天这根K线还是空的
   const real=ks.filter(k=>!k.empty), band=DR&&!s.delisted&&["pre","auction","market"].includes(S.phase);
   const LN=DR?todayLines(s.code):[], pend=DR&&S.pendLine&&S.pendLine.code===s.code?S.pendLine:null;
   const n=ks.length, pw=w-44, ph=h*0.7, vh=h*0.18, vy=h-vh-12;
   let hi=Math.max(...real.map(x=>x.h)), lo=Math.min(...real.map(x=>x.l));
-  if(DR){ const ex=[...LN.map(l=>l.px),...(pend?[pend.px]:[]),...(band?[s.prev*1.2,s.prev*0.8]:[])]; if(ex.length){ hi=Math.max(hi,...ex); lo=Math.min(lo,...ex); } const pad=(hi-lo)*0.03; hi+=pad; lo-=pad; }
+  if(DR){ const ex=[...LN.map(l=>l.px),...(pend?[pend.px]:[]),...(band?(Z>=30?[s.prev*1.2,s.prev*0.8]:[s.price,s.prev]):[])]; if(ex.length){ hi=Math.max(hi,...ex); lo=Math.min(lo,...ex); } const pad=(hi-lo)*(Z>=30?0.03:0.08); hi+=pad; lo-=pad; }
   const Y=v=>6+(hi-v)/(hi-lo||1)*(ph-6), cwid=pw/n;
   KSC=DR?{hi,lo,top:6,ph}:null;
   const vmax=Math.max(...real.map(x=>x.v||0))||1;
   g.strokeStyle="#2e2b3a"; g.lineWidth=1; [0.25,0.5,0.75].forEach(f=>{ g.beginPath(); g.moveTo(0,6+f*(ph-6)); g.lineTo(pw,6+f*(ph-6)); g.stroke(); });
   if(band){   // 今天能走到的范围：涨停价到跌停价
-    const yu=Y(s.prev*1.2), yd=Y(s.prev*0.8); g.fillStyle="rgba(242,181,68,.05)"; g.fillRect(0,yu,pw,yd-yu);
+    const yu=Math.max(6,Y(s.prev*1.2)), yd=Math.min(ph,Y(s.prev*0.8)); g.fillStyle="rgba(242,181,68,.05)"; g.fillRect(0,yu,pw,yd-yu);
     [[limUpPx(s),"涨停","#ef4a52"],[s.prev,"","#8a8598"],[limDnPx(s),"跌停","#27b36b"]].forEach(([v,t,c])=>{ const y=Y(v);
+      if(v>hi||v<lo){ if(t){ g.font="10px Noto Sans SC, sans-serif"; g.textAlign="right"; g.fillStyle=c; g.fillText(v>hi?`${t} ${v.toFixed(2)} ↑`:`${t} ${v.toFixed(2)} ↓`,pw-3,v>hi?16:ph-3); } return; }
       g.strokeStyle=c; g.globalAlpha=.7; g.setLineDash([2,4]); g.beginPath(); g.moveTo(0,y); g.lineTo(pw,y); g.stroke(); g.setLineDash([]); g.globalAlpha=1;
       g.font="10px IBM Plex Mono, monospace"; g.textAlign="left"; g.fillStyle=c; g.fillText(v.toFixed(2),pw+4,y+3);
       if(t){ g.font="10px Noto Sans SC, sans-serif"; g.textAlign="right"; g.fillText(t,pw-3,y+(t==="跌停"?12:-4)); } }); }
@@ -2824,15 +2891,16 @@ function drawKChart(s){
     if(k.empty){ g.strokeStyle="rgba(242,181,68,.7)"; g.setLineDash([3,3]); g.strokeRect(x-cwid*0.45,8,cwid*0.9,ph-10); g.setLineDash([]); return; }
     const up=k.c>=k.o, col=up?"#ef4a52":"#27b36b";
     g.strokeStyle=col; g.beginPath(); g.moveTo(x,Y(k.h)); g.lineTo(x,Y(k.l)); g.stroke();
-    const bw=Math.max(1,cwid*0.65), y1=Y(Math.max(k.o,k.c)), y2=Y(Math.min(k.o,k.c));
+    const bw=Math.max(1,Math.min(26,cwid*0.65)), y1=Y(Math.max(k.o,k.c)), y2=Y(Math.min(k.o,k.c));
     g.fillStyle=col; g.fillRect(x-bw/2,y1,bw,Math.max(1,y2-y1));
     if(k.v){ const vhh=k.v/vmax*vh; g.globalAlpha=.55; g.fillRect(x-bw/2,vy+vh-vhh,bw,vhh); g.globalAlpha=1; }
     if(k.today){ g.strokeStyle="#f2b544"; g.strokeRect(x-bw/2-1.5,Y(k.h)-2,bw+3,Y(k.l)-Y(k.h)+4); } });
-  const ma=(len,col)=>{ g.strokeStyle=col; g.lineWidth=1.2; g.beginPath(); let st=false; ks.forEach((k,i)=>{ if(i<len-1||k.empty) return; const a=ks.slice(i-len+1,i+1).reduce((t,x)=>t+x.c,0)/len; const x=i*cwid+cwid/2; st?g.lineTo(x,Y(a)):(g.moveTo(x,Y(a)),st=true); }); g.stroke(); };
-  ma(5,"#f2d06b"); ma(20,"#b48ce0");
+  const nk=s.k.length, hN=ks.filter(k=>!k.today).length, cAt=j=>j<nk?s.k[j].c:s.price;
+  const ma=(len,col)=>{ g.strokeStyle=col; g.lineWidth=1.2; g.beginPath(); let st=false; ks.forEach((k,i)=>{ if(k.empty) return; const j=nk-hN+i; if(j-len+1<0) return; let t=0; for(let q=j-len+1;q<=j;q++) t+=cAt(q); const a=t/len, x=i*cwid+cwid/2; st?g.lineTo(x,Y(a)):(g.moveTo(x,Y(a)),st=true); }); g.stroke(); };
+  g.save(); g.beginPath(); g.rect(0,4,pw,ph-2); g.clip(); ma(5,"#f2d06b"); ma(20,"#b48ce0"); g.restore(); g.lineWidth=1;
   g.fillStyle="#7d7890"; g.font="10px IBM Plex Mono, monospace"; g.textAlign="left";
   if(!band){ g.fillText(hi.toFixed(2),pw+4,12); g.fillText(lo.toFixed(2),pw+4,ph); } g.fillText("MA5",4,h-2); g.fillStyle="#b48ce0"; g.fillText("MA20",34,h-2);
-  g.fillStyle="#7d7890"; g.textAlign="right"; g.fillText(S.phase==="market"||ks.at(-1).empty?"今天":"昨天",pw,h-2); g.textAlign="center"; g.fillText("60 个交易日",pw/2,h-2);
+  g.fillStyle="#7d7890"; g.textAlign="right"; g.fillText(S.phase==="market"||ks.at(-1).empty?"今天":"昨天",pw,h-2); g.textAlign="center"; g.fillText(`${Z} 个交易日`,pw/2,h-2);
   if(DR){
     if(band){ const y=Y(s.price); g.fillStyle="#ece8f2"; g.beginPath(); g.moveTo(pw,y); g.lineTo(pw+5,y-4); g.lineTo(pw+5,y+4); g.closePath(); g.fill(); }
     const tag=(t,y,col)=>{ g.font="10.5px Noto Sans SC, sans-serif"; const tw=g.measureText(t).width+10, ty=Math.max(16,Math.min(ph-2,y-4)); g.fillStyle="rgba(18,17,24,.9)"; g.fillRect(4,ty-11,tw,15); g.fillStyle=col; g.textAlign="left"; g.fillText(t,9,ty); };
@@ -2931,6 +2999,17 @@ function openInfo(code){
 
 /* 自选：不用整个板块，单只股票也能加 */
 function toggleFav(code){ S.fav=S.fav||[]; const i=S.fav.indexOf(code); if(i>=0){ S.fav.splice(i,1); toast(`已从自选移除：${stock(code).name}`); } else { S.fav.unshift(code); S.open.add("__fav"); toast(`已加入自选：${stock(code).name}`); sfx("click"); } }
+function lineBrief(c){ const s=stock(c); return todayLines(c).map(l=>{ const T=LINE_T[l.type];
+  if(l.st==="wait"){ const gap=l.dir==="up"?(l.px-s.price)/l.px:(s.price-l.px)/l.px; return `${T.n} ${l.px.toFixed(2)}（还差 ${(Math.max(0,gap)*100).toFixed(1)}%）`; }
+  return `${T.n} ${l.px.toFixed(2)} ${{done:"✓ 已成交",fail:"✕ 没成交",queue:"排队中",exp:"没碰到"}[l.st]||""}`; }).join(" · "); }
+function lineGroupRows(){
+  const L=todayLines(), codes=[...new Set(L.map(l=>l.code))].filter(c=>stock(c)), wait=L.filter(l=>l.st==="wait").length;
+  if(!S._lnInit){ S._lnInit=true; S.open.add("__lines"); }
+  const op=S.open.has("__lines");
+  return `<li class="th lnth"><button type="button" data-t="__lines" aria-expanded="${op}"><span><i class="chev">${op?"▾":"▸"}</i>✎ 画线股<span class="cnt">${codes.length} 只</span></span><span class="num" id="lnwait">${wait?`${wait} 条线在等`:""}</span></button></li>`+
+    (codes.length? codes.map(c=>{ const s=stock(c); return `<li data-g="__lines" ${op?"":"hidden"}><button type="button" data-c="${c}"><span><div class="nm">${s.name}</div><div class="cd ld" id="ld-${c}">${esc(lineBrief(c))}</div></span><span class="px" id="lpx-${c}"></span><span class="pc" id="lpc-${c}"></span></button></li>`; }).join("")
+     : `<li data-g="__lines" ${op?"":"hidden"}><div class="favhint">今天还没有画线。选一只股票，在行情图上切到「✎ 画线下单」，在日K上画一条线。</div></li>`);
+}
 function favRows(){
   const F=(S.fav||[]).filter(c=>stock(c)), op=S.open.has("__fav")||!S._favInit;
   if(!S._favInit){ S._favInit=true; S.open.add("__fav"); }
@@ -3704,9 +3783,14 @@ function closeMarket(){
   const watchMin=S.appTime.stock-(S._ps||0), watchF=0.3+1.7*Math.min(1,watchMin/MINUTES);   // 盯盘越久，盈亏带来的压力越大
   const gap=goalGap(); S.gap=gap;
   if(Math.abs(pl)>=DAILY_INCOME*10) S.numb=Math.min(1,(S.numb||0)+0.02);   // 一天的涨跌抵得上一个月生活费：几百块慢慢就不像钱了
-  if(pl<0) S.stress+=5*Math.log(1+r)*watchF*(1+0.15*S.spend+0.6*(S.numb||0))*stressAmp(); else S.stress+=2.5*Math.log(1+r)*watchF*stressAmp();
+  const peak=S.dayPeak||0, flipF=pl<0&&peak>=DAILY_INCOME? 1+Math.min(1,peak/DAILY_INCOME/2) : 1;   // 盘中赚过、收盘亏
+  if(pl<0) S.stress+=5*Math.log(1+r)*watchF*(1+0.15*S.spend+0.6*(S.numb||0))*stressAmp()*flipF;
+  else S.stress-=1.2*Math.log(1+r)*reliefF();   // 赚钱的日子：压力不涨，还会松一点（计划落下太多时松得少）
+  if(flipF>1) S.flipDays=(S.flipDays||0)+1;
+  const wasUp=(S.hist.at(-1)||{eq:S.start}).eq>=S.start*1.01, nowDown=eq<S.start;   // 前一天收盘还赚着，今天跌破本金
+  if(wasUp&&nowDown) S.stress+=8*stressAmp();
   const gapSt=8*gap*(1+d/12); S.stress+=gapSt;   // 计划落下得越多、日子越往后，越慌
-  if(S.T>=8 && r<S.T*0.2){S.stress+=5; empty=true;}
+  if(S.T>=8 && r<S.T*0.2){ if(pl<0) S.stress+=5; empty=true; }
   const levLines=[]; levClose(levLines);
   const oldT=S.T; S.T=Math.max(S.T*0.985,r);
   // 隐藏属性：盯盘残留。近几天盯盘越久，学习和实习效率越低（玩家看不到数值）
@@ -3726,6 +3810,8 @@ function closeMarket(){
   const tiredLine = S.tired? "" : "";
   S.tired=false;
   const lines=[];
+  if(flipF>1) lines.push(`今天最多赚过 ${fmt(peak)}，收盘却亏了 ${fmt(-pl)}。从赚到亏，比一直亏更难受。`);
+  if(wasUp&&nowDown) lines.push("前几天账户还是赚的，今天跌破了本金。");
   if(empty) lines.push(`今天的浮动只有 ${r.toFixed(1)} 天生活费。你几乎没有感觉，反而坐立不安。`);
   lines.push(...levLines);
   if(gap>=0.08) lines.push(`${planLine()}。${gap>=0.4?"差得太多了。你一想到这个，胸口就发紧。":gap>=0.2?"越往后，越慌。":"落下了一点。"}`);
@@ -4175,8 +4261,8 @@ function renderPz(){
   const eq=Math.max(0,equity()), cur=S.pz;
   setView(`<div class="h-app"><button class="back" id="bk" type="button" aria-label="返回">‹</button><h2>倍增宝</h2><span class="small">最高 10 倍</span></div>
     <div class="ln-card pz"><div class="small">你的本金（账户总资产）</div><div class="ln-big">${fmt(eq)}</div><div class="small">按天计费 · 随借随还 · 当天到账</div></div>
-    ${S.pzBurned?`<p class="ln-fine">第 ${S.pzBurned} 天，你的账户触及平仓线，配资合作已终止。</p>`:cur?`<div class="ln-sec">配资中</div><div class="ln-row"><span><b>${cur.lev} 倍 · 额度 ${fmt(S.creditLine)}</b><small>管理费每天 ${fmt(Math.round(S.creditLine*cur.rate))}（不管用没用都收）· 满仓下跌约 ${pzDrop(cur.lev)}% 就强制平仓</small></span><button class="btn" type="button" id="pzEnd">结束配资</button></div>`
-      :PZ_OPTS.map(o=>`<div class="ln-row"><span><b>${o.lev} 倍配资 · 可操盘 ${fmt(eq*o.lev)}</b><small>管理费每天 ${fmt(Math.round(eq*(o.lev-1)*o.rate))} · 满仓跌约 ${pzDrop(o.lev)}% 就会被强制平仓</small></span><button class="btn" type="button" data-pz="${o.lev}" ${eq<1000?"disabled":""}>申请</button></div>`).join("")}
+    ${cur?`<div class="ln-sec">配资中</div><div class="ln-row"><span><b>${cur.lev} 倍 · 额度 ${fmt(S.creditLine)}</b><small>管理费每天 ${fmt(Math.round(S.creditLine*cur.rate))}（不管用没用都收）· 满仓下跌约 ${pzDrop(cur.lev)}% 就强制平仓</small></span><button class="btn" type="button" id="pzEnd">结束配资</button></div>`
+      :(S.pzBurned?`<p class="ln-fine">第 ${S.pzBurned} 天，你的账户触及平仓线，被强制平仓${S.pzBurns>1?`（已经是第 ${S.pzBurns} 次）`:""}。</p><div class="ln-rev"><b>倍增宝客服</b>：亲，平仓只是暂时的。重新签约当天到账，抓住下一波就能回本。</div>`:"")+PZ_OPTS.map(o=>`<div class="ln-row"><span><b>${o.lev} 倍配资 · 可操盘 ${fmt(eq*o.lev)}</b><small>管理费每天 ${fmt(Math.round(eq*(o.lev-1)*o.rate))} · 满仓跌约 ${pzDrop(o.lev)}% 就会被强制平仓</small></span><button class="btn" type="button" data-pz="${o.lev}" ${eq<1000?"disabled":""}>申请</button></div>`).join("")}
     <div class="ln-sec">大家都在说</div>
     <div class="ln-rev"><b>股海阿明</b>：十倍的感觉，一天顶别人十天。</div><div class="ln-rev"><b>不想上班</b>：上个月翻了三倍，已经辞职了。</div><div class="ln-rev"><b>匿名用户</b>：……强平那天，我在开会。</div>
     <p class="ln-fine">配资有风险。本平台不对账户亏损承担任何责任。</p>`,"pz");
@@ -4189,7 +4275,7 @@ function pzApply(lev){
   sheet(`<div class="eyebrow">倍增宝</div><h3>${lev} 倍配资</h3><p class="dim">本金 ${fmt(eq)}，可操盘 ${fmt(eq*lev)}。\n管理费按额度每天收 ${fmt(Math.round(eq*(lev-1)*o.rate))}，不管用没用。\n满仓的话，跌 ${pzDrop(lev)}% 左右就会被强制平仓。</p>
     <div class="choices"><button class="btn primary" data-c="ok" type="button">签约，马上到账</button><button class="btn" data-c="no" type="button">再想想</button></div>`,c=>{
     closeSheet(); if(c!=="ok") return;
-    S.pz={lev,rate:o.rate,d:S.day}; S.creditLine=eq*(lev-1); S.pzDays=(S.pzDays||0);
+    S.pz={lev,rate:o.rate,d:S.day}; S.creditLine=eq*(lev-1); S.pzDays=(S.pzDays||0); if(S.pzBurned) S.pzResign=(S.pzResign||0)+1;
     S.numb=Math.min(1,(S.numb||0)+0.1); S.stress=Math.min(stressCap(),S.stress+4*stressAmp()); hrKick(10); sfx("coin"); deviate("P3",`开通了 ${lev} 倍配资`);
     toast(`${lev} 倍配资已开通，额度 ${fmt(S.creditLine)}`); renderPz(); updateChrome();
   });
@@ -4426,7 +4512,7 @@ function endScript(kind){
     win:[
       {label:"第二十天",bg0:"dorm",mus:"night",card:["第二十天","宿舍 · 22:30"]},
       {show:{san:"normal",zhou:"smile"},t:"晚上，宿舍。"},
-      {who:"zhou",e:"smile",t:"听说你这回赚了不少？请客请客！"},
+      {who:"zhou",e:"smile",t:eq-S.start>=S.start*0.3?"听说你这回赚了不少？请客请客！":"听说你这回赚了点？请客请客！"},
       {who:"me",t:"……运气好。"},
       {who:"san",e:"serious",t:"赚了就收手吧。模拟考你考得怎么样？"},
       {who:"me",t:pass?"过了，擦着线。":"……没考好。"},
@@ -4472,12 +4558,14 @@ function endScript(kind){
   if(kind!=="focus"&&kind!=="mom"&&kind!=="collapse"&&zhouOk) L.push({who:"zhou",e:"serious",t:"对了……你上次劝我那几句，我听进去了。面试那天，我一眼盘都没看。"});
   return L;
 }
+/* 结局按第二十天的账户分：涨 3% 以上算赚到了，跌 3% 以上算亏掉了，中间算回到原点（宿舍那场戏和复盘报告用同一个标准） */
+const endKind=r=>r>=0.03?"win":r<=-0.03?"loss":"flat";
 /* 第一次亏钱收场：如果这些钱用在别的地方 */
 function whatIf(lost,next){
   if(lost<300||META.sawWhatIf){ next(); return; }
   META.sawWhatIf=true; if(S.sawMomPost) META.momPhoneUnlock=true; saveMeta();
   const items=[...(S.sawMomPost?[["妈妈想换的新手机","¥7,000",7000,"她说太贵了，换了浪费。"]]:[]),["回家的高铁票","¥280 一张",280,"够回 "+Math.floor(lost/280)+" 趟家。"],["和老三吃烧烤","¥60 一顿",60,"够吃 "+Math.floor(lost/60)+" 顿。"],["一整年的考研网课","¥1,980",1980,""],["奶茶店打工","一小时 ¥20",20,"那是你 "+Math.round(lost/20)+" 个小时的寒假。"]];
-  openOverlay(`<div class="whatif"><div class="eyebrow">二十天之后</div><h2>如果这些钱用在别的地方……</h2><p class="wi-sum">你亏掉了 <b>${fmt(lost)}</b>。</p>
+  openOverlay(`<div class="whatif"><div class="eyebrow">${S.day>=DAYS?"二十天之后":`第 ${S.day} 天`}</div><h2>如果这些钱用在别的地方……</h2><p class="wi-sum">你亏掉了 <b>${fmt(lost)}</b>。</p>
     <div class="wi-list">${items.map(([n,p,v,note])=>{ const f=Math.min(1,lost/v); return `<div class="wi"><div class="wi-h"><b>${n}</b><span>${p}</span></div><div class="bar"><i style="width:${(f*100).toFixed(0)}%"></i></div><div class="small">${f>=1?(note||"够了。"):`还差 ${fmt(v-lost)}。`}${f>=1&&v===7000?" 够了。":""}</div></div>`; }).join("")}</div>
     ${S.sawMomPost&&albumImgFor("album_5")?`<figure class="wi-ph"><img src="${albumImgFor("album_5")}" alt=""><figcaption>开学前，妈妈送你到火车站。那天她的手机拍出来是糊的。</figcaption></figure>`:""}
     <button class="btn primary" data-c="ok" type="button">……</button></div>`,"day",()=>{ closeOverlay(); next(); });
@@ -4485,8 +4573,8 @@ function whatIf(lost,next){
 function albumImgFor(k){ const p=pastPhoto(k); return p?(oldPhone(p.cv,k+":"+(isF()?"f":"m")+lk0())||p.img):null; }
 function showReport(){
   if(!S._endTalked){ S._endTalked=true; closeSheet(); S.phase="report"; S.ended=true;
-    const eq0=equity(), ret0=eq0/S.start-1, k0=S.collapsed?"collapse":S.skipped20?"focus":ret0>=0.3?"win":ret0<=-0.3?"loss":ret0<=-0.03?"loss":ret0>=0.03?"win":"flat";
-    vnStart(endScript(k0),()=>whatIf(S.start-eq0,showReport),"第二十天"); return; }
+    const eq0=equity(), ret0=eq0/S.start-1, k0=S.collapsed?"collapse":S.skipped20?"focus":endKind(ret0);
+    vnStart(endScript(k0),()=>whatIf(S.start-eq0,showReport),S.collapsed?`第 ${S.day} 天`:"第二十天"); return; }
   closeSheet(); S.phase="report"; S.ended=true; META.runs++;
   if(S.start-equity()>0&&S.sawMomPost&&!S.boughtPhone) META.momPhoneUnlock=true;
   saveMeta();
@@ -4498,12 +4586,13 @@ function showReport(){
   const maxPos=Math.max(0,...H.map(x=>x.r));
   const actual = (levNow()>1||maxPos>=25)?"进取型":(maxPos>=8?"平衡型":"稳健型");
   const best=Math.max(0,...H.map(x=>x.pl));
-  const kind = S.collapsed?"collapse": ret>=0.3?"win": ret<=-0.3?"loss":"flat";
+  const kind = S.collapsed?"collapse": endKind(ret);
   const end = {
-    win:`账户：${fmt(eq)}（${pct(ret)}）。\n你赚到了。比小周一整个暑假的实习工资还多。\n\n六月，你坐在自习室里。课本摊开着。\n你看了一眼手机。\n只是一眼。\n\n你最好的那一天赚了 ${fmt(best)}，相当于打工 ${Math.round(best/HOUR_WAGE)} 小时。从那以后，平常的日子都很难再让你有感觉。\n你再也不想经历第二次。可你也回不去了。`,
-    loss:`账户：${fmt(eq)}（${pct(ret)}）。\n亏掉的 ${fmt(S.start-eq)}，相当于奶茶店打工 ${Math.round((S.start-eq)/HOUR_WAGE)} 小时，或者 ${Math.round((S.start-eq)/DAILY_INCOME)} 天的生活费。\n\n你没有告诉妈妈。\n你在想，如果再给你一次机会，你一定能赢回来。`,
-    flat:`账户：${fmt(eq)}（${pct(ret)}）。\n二十天，涨涨跌跌，最后差不多回到了原点。\n手续费一共 ${fmt(S.fees)}，相当于打工 ${(S.fees/HOUR_WAGE).toFixed(0)} 小时。\n\n你很努力。你研究了消息、盯了盘、算了仓位。\n但这些努力没有改善你的处境。`,
-    collapse:`第 ${S.day} 天下午，你在课上晕倒了。\n醒来的时候，第一件事是摸手机看盘。\n\n账户：${fmt(eq)}（${pct(ret)}）。`,
+    win:`账户：${fmt(eq)}（${pct(ret)}）。\n你赚到了。${eq-S.start>=8000?"比小周一整个暑假的实习工资还多。":eq-S.start>=4000?"比小周实习一个月的工资还多。":`相当于奶茶店打工 ${Math.round((eq-S.start)/HOUR_WAGE)} 小时。`}\n\n六月，你坐在自习室里。课本摊开着。\n你看了一眼手机。\n只是一眼。\n\n${best>=DAILY_INCOME*5?`你最好的那一天赚了 ${fmt(best)}，相当于打工 ${Math.round(best/HOUR_WAGE)} 小时。从那以后，平常的日子都很难再让你有感觉。`:"赚得不多。可你已经记住了，钱可以这样来。"}\n${best>=DAILY_INCOME*5?"你再也不想经历第二次。可你也回不去了。":"你说以后不碰了。可你已经在等下一次了。"}`,
+    loss:`账户：${fmt(eq)}（${pct(ret)}）。\n亏掉的 ${fmt(S.start-eq)}，相当于奶茶店打工 ${Math.round((S.start-eq)/HOUR_WAGE)} 小时，或者 ${Math.round((S.start-eq)/DAILY_INCOME)} 天的生活费。\n\n${S.confessed?"你跟妈妈说了实话。她没有怪你。":"你没有告诉妈妈。"}\n你在想，如果再给你一次机会，你一定能赢回来。`,
+    flat:(S.sells.length||S.clears.length||Object.keys(S.hold).length)?`账户：${fmt(eq)}（${pct(ret)}）。\n二十天，涨涨跌跌，最后差不多回到了原点。\n手续费一共 ${fmt(S.fees)}，相当于打工 ${(S.fees/HOUR_WAGE).toFixed(0)} 小时。\n\n你很努力。你研究了消息、盯了盘、算了仓位。\n但这些努力没有改善你的处境。`
+      :`账户：${fmt(eq)}（${pct(ret)}）。\n你下载了软件，却几乎没有买卖。二十天，账户停在原地。\n\n可你盯着它的那些时间，没有回来。`,
+    collapse:`第 ${S.day} 天下午，你在${S.hasClass?"课上":"图书馆"}晕倒了。\n醒来的时候，第一件事是摸手机看盘。\n\n账户：${fmt(eq)}（${pct(ret)}）。`,
   }[kind];
   const mock = mockScore(), kp=kyProgress();
   const devList = S.deviations.length? `<ul>${S.deviations.map(x=>`<li>第 ${x.day} 天：${esc(x.text)}</li>`).join("")}</ul>` : `<p>你守住了自己定的规矩${S.principles.length?"":"（你没有给自己定任何规矩）"}。</p>`;
@@ -4535,7 +4624,7 @@ function showReport(){
     <div class="rgrid">${albumSection()}
     <section><h4>上课时间，你的注意力去了哪里</h4>
       ${apps.map(([nm,k,c])=>`<div class="row"><span>${nm}</span><span class="bar"><i style="width:${S.appTime[k]/totalMin*100}%;background:${c}"></i></span><span class="num">${hrs(S.appTime[k])} h</span></div>`).join("")}
-      <p>其中有 <b class="num">${hrs(S.skipped)}</b> 小时，是你按下「加速看盘」快进掉的。</p>
+      <p>其中有 <b class="num">${hrs(S.skipped)}</b> 小时，是你按下「加速看盘」快进掉的。${S.closeSkips?`有 ${S.closeSkips} 天，你直接快进到了收盘。`:""}</p>
       <p>开盘前，你有 ${S.readDays.news} 天点开了财讯，${S.readDays.comm} 天点开了股友社区，一共在盘前读了 <b class="num">${hrs(S.preRead)}</b> 小时消息。</p></section>
     <section><h4>账户</h4><div class="big ${ret>=0?"up":"down"}">${pct(ret)}</div>
       <p>${fmt(S.start)} → ${fmt(eq)}。手续费累计 ${fmt(S.fees)}，像一把锉刀，相当于打工 ${(S.fees/HOUR_WAGE).toFixed(1)} 小时。</p></section>
@@ -4565,6 +4654,7 @@ function showReport(){
       ${S.clears.length?`<li>你一共清仓 ${S.clears.length} 次。其中 ${S.clears.filter(c=>stock(c.code).price>c.avgSell*1.03).length} 次卖出后它又涨了，${S.clears.filter(c=>stock(c.code).price<c.avgSell*0.97).length} 次卖出后它继续跌。</li>`:""}
       ${(()=>{ const ls=S.lineStat||{}, L=(S.lines||[]).filter(l=>l.st!=="cancel"); if(!L.length) return ""; const ex=L.filter(l=>l.st==="exp").length;
         return `<li>你在日K上画了 ${L.length} 条线，碰线成交 ${ls.filled||0} 条${ex?`，${ex} 条到收盘都没碰到${ls.near?`（其中 ${ls.near} 条只差不到 1%）`:""}`:""}。${ls.limit?`有 ${ls.limit} 条碰线时正赶上涨停或跌停封板，只能去排队。`:""}${ls.t1?`有 ${ls.t1} 条卖出线碰到了，却因为 T+1 卖不出去。`:""}</li>`; })()}
+      ${S.flipDays?`<li>有 ${S.flipDays} 天，盘中明明赚着钱，收盘却变成了亏。那几天的压力，比一直亏的日子涨得更快。</li>`:""}
       ${(S.streakMax||0)>=4?`<li>你最长连续专注了 ${S.streakMax} 天。${S.skipped20?"后来的日子，你没有再打开过行情。":""}</li>`:""}
       <li>${(S.habit||0)>=0.6?"二十天下来，坐下来学习成了你的习惯。":(S.habit||0)>=0.3?"你开始有了一点学习的习惯，但还不稳。":"你一直没能养成坐下来的习惯。每次坐下，都要重新开始。"}</li>
       <li>你在专注时切出去看手机 ${S.switches||0} 次。每次回来，大约要 10 分钟才能重新进入状态，因此少学了 ${hrs(S.refocusLost||0)} 小时。</li>
@@ -4579,7 +4669,7 @@ function showReport(){
       ${S.radi.tip?`<li>你跟小周说想回本。第二天，小周给你转发了一条「内幕消息」。</li>`:""}
       ${S.boughtPhone?`<li>开学前，你用八千块里的七千，给妈妈买了一部新手机。她在圈子里发了好几条用新手机拍的照片。</li>`:META.seenMomPhone?`<li>妈妈的手机，还是那部用了六年的。</li>`:""}
       ${(S.loans||[]).length?`<li>你在「秒借」借了 ${S.loans.length} 笔，一共 ${fmt(S.loans.reduce((a,l)=>a+l.amt,0))}。服务费和利息一共 ${fmt(S.loanFees+S.loans.filter(l=>!l.paid).reduce((a,l)=>a+loanDue(l)-l.amt,0))}。${loanOwed()?`到最后，还欠 ${fmt(loanOwed())}。`:"都还上了。"}${S.collectorCalled?"催收的电话，打到了妈妈那里。":""}</li>`:""}
-      ${S.pzFees?`<li>配资管理费和融资利息，一共交了 ${fmt(S.pzFees)}。${S.pzBurned?`第 ${S.pzBurned} 天，倍增宝强制平仓。`:""}</li>`:""}
+      ${S.pzFees?`<li>配资管理费和融资利息，一共交了 ${fmt(S.pzFees)}。${S.pzBurned?(S.pzBurns>1?`倍增宝强制平仓 ${S.pzBurns} 次，最后一次在第 ${S.pzBurned} 天。`:`第 ${S.pzBurned} 天，倍增宝强制平仓。`):""}${S.pzResign?`爆仓之后，你又签了 ${S.pzResign} 次。`:""}</li>`:""}
       ${(()=>{ const sl=S.shopLog||[]; if(!sl.length) return ""; const t=sl.reduce((a,x)=>a+x.cost,0), pp=sl.filter(x=>x.paper).reduce((a,x)=>a+x.cost,0), end=equity();
         return `<li>你在「附近好店」花了 ${fmt(t)}${pp?`，其中 ${fmt(pp)} 是账面赚着钱的时候花的`:""}。${pp&&end<S.start?"后来账面上的钱没了，花出去的钱也没有回来。":""}</li>`+((S.numb||0)>=0.4?`<li>最后那几天，你看价格的方式变了：先算它是账面赚的百分之几。这个习惯，比亏掉的钱更难改回来。</li>`:""); })()}
       ${S.lookDay?`<li>第 ${S.lookDay} 天，你换了${{cut:"发型",dye:"发色",clothes:"衣服"}[S.lookWhat]||"造型"}。相册里第一张和最后一张的你，看起来不太一样。</li>`:""}
@@ -4597,7 +4687,7 @@ function showReport(){
   const again=()=>{ closeOverlay(); newGame(); renderIntro(); drawYou(); };
   const showRep=()=>openOverlay(S.repHtml,"rep",c=>{ if(c==="again") again(); });
   setView(`<div class="pad" style="display:grid;gap:14px;padding-top:48px">
-    <div class="eyebrow">二十天过去了</div><h1 style="font-family:var(--f-display);font-weight:400;font-size:34px;margin:0">复盘报告</h1>
+    <div class="eyebrow">${S.collapsed?`第 ${S.day} 天`:"二十天过去了"}</div><h1 style="font-family:var(--f-display);font-weight:400;font-size:34px;margin:0">复盘报告</h1>
     <p class="small">报告已经铺在整个屏幕上。</p>
     <button class="btn primary" id="repOpen" type="button">再看一遍报告</button><button class="btn" id="repAgain" type="button">再来一次</button></div>`,"intro");
   $("#repOpen").onclick=showRep; $("#repAgain").onclick=again;
@@ -5859,7 +5949,7 @@ function tone(dest,t,f,type,peak,a,dec,f2){ const c=AU.ctx, o=c.createOscillator
 function noiseHit(dest,t,peak,dec,type,freq,q){ const c=AU.ctx, s=c.createBufferSource(), f=c.createBiquadFilter(), g=c.createGain(); s.buffer=AU.noise; f.type=type||"highpass"; f.frequency.value=freq||6000; if(q) f.Q.value=q; env(g,t,0.003,peak,dec); s.connect(f); f.connect(g); g.connect(dest); s.start(t,Math.random()*0.5); s.stop(t+dec+0.05); }
 /* 音效 */
 function sfx(n){
-  if(!AU.ctx||PREF.snd==="off") return; const t=AU.ctx.currentTime+0.005, D=AU.sfx;
+  if(!AU.ctx||PREF.snd==="off"||(S&&S.skipClose)) return; const t=AU.ctx.currentTime+0.005, D=AU.sfx;
   switch(n){
     case "click": tone(D,t,900,"sine",0.06,0.002,0.035,620); break;
     case "page": noiseHit(D,t,0.03,0.12,"bandpass",1800,0.8); break;

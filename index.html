@@ -146,6 +146,19 @@ td.sc{font-family:var(--f-mono);white-space:nowrap}
 .play ol{margin:8px 0 0;padding-left:1.3em;display:grid;gap:4px;font-size:14px}
 .play .note{font-size:13px;color:var(--muted);margin-top:10px}
 @media (max-width:700px){.play{grid-template-columns:1fr}}
+/* 六种结局 */
+.ends{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.end{background:var(--sheet-2);border-top:3px solid var(--gold);border-radius:0 0 12px 12px;padding:14px 16px 16px;display:grid;gap:8px;align-content:start;min-width:0}
+.end .tag{font-family:var(--f-mono);font-size:12px;letter-spacing:.06em;color:var(--muted)}
+.end h3{margin:0;font-size:17px;line-height:1.4}
+.end h3 small{display:block;font-size:13px;font-weight:500;color:var(--muted)}
+.end .if{font-size:13.5px;color:var(--muted)}
+.end .if b{color:var(--ink);font-weight:600}
+.end blockquote{margin:2px 0 0;padding-left:10px;border-left:2px solid var(--line);font-size:14px;line-height:1.75;color:var(--ink)}
+.end.win{border-top-color:var(--up)}.end.loss{border-top-color:var(--down)}.end.flat{border-top-color:var(--muted)}.end.crash{border-top-color:var(--ink)}
+.ends-note{margin-top:12px;font-size:13px;color:var(--muted)}
+@media (max-width:860px){.ends{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:520px){.ends{grid-template-columns:1fr}}
 footer{padding-block:30px 46px;color:var(--muted);font-size:12.5px}
 </style>
 
@@ -153,10 +166,10 @@ footer{padding-block:30px 46px;color:var(--muted);font-size:12.5px}
   <div class="row">
     <span>灵感库<b class="num">44</b></span><span>保留核心<b class="num up">▲26</b></span><span>候选<b class="num">17</b></span><span>搁置<b class="num dn">▼1</b></span>
     <span>评分维度<b class="num">7</b></span><span>机制标签<b class="num">13</b></span><span>人工化学判定<b class="num">52</b></span>
-    <span>AI 美术<b class="num g">259 张</b></span><span>多轮对话<b class="num">53 段</b></span><span>结局<b class="num">6 种</b></span><span>迭代<b class="num up">V25</b></span>
+    <span>AI 美术<b class="num g">259 张</b></span><span>多轮对话<b class="num">53 段</b></span><span>结局<b class="num">6 种</b></span><span>迭代<b class="num up">V27</b></span>
     <span class="dup" aria-hidden="true" style="display:contents"><span>灵感库<b class="num">44</b></span><span>保留核心<b class="num up">▲26</b></span><span>候选<b class="num">17</b></span><span>搁置<b class="num dn">▼1</b></span>
     <span>评分维度<b class="num">7</b></span><span>机制标签<b class="num">13</b></span><span>人工化学判定<b class="num">52</b></span>
-    <span>AI 美术<b class="num g">259 张</b></span><span>多轮对话<b class="num">53 段</b></span><span>结局<b class="num">6 种</b></span><span>迭代<b class="num up">V25</b></span></span>
+    <span>AI 美术<b class="num g">259 张</b></span><span>多轮对话<b class="num">53 段</b></span><span>结局<b class="num">6 种</b></span><span>迭代<b class="num up">V27</b></span></span>
   </div>
 </div>
 
@@ -192,7 +205,7 @@ footer{padding-block:30px 46px;color:var(--muted);font-size:12.5px}
           </ul></div>
         <div><p class="k">产出：</p>
           <ul>
-            <li>可玩 Demo：单文件网页，约 6,000 行，迭代 25 个版本；每版发布前用自动化脚本跑完整局回归测试。</li>
+            <li>可玩 Demo：单文件网页，约 6,000 行，迭代 27 个版本；每版发布前用自动化脚本跑完整局回归测试。</li>
             <li>AI 美术 259 张，角色形象一致；自动抠图和换色遮罩，让一套姿势支持多种发色和服装。</li>
             <li>6 份文档（灵感总表、评分模型说明、评估报告、行情规则、美术需求、美术提示词手册），以及评分模型脚本（Python）。</li>
           </ul></div>
@@ -265,7 +278,7 @@ footer{padding-block:30px 46px;color:var(--muted);font-size:12.5px}
       <article><h3>先建模型，再写代码</h3><p>灵感先进库、打分、算化学反应，再决定做什么。后来加的「附近好店」「借贷与配资」，也先问同一个问题：<em>它服务「反赌博」这个主题吗？</em>刺激可以加，代价必须跟着来。</p></article>
       <article><h3>把主题写进数值</h3><p>每一种刺激都有对应的代价：浮动金额按生活费换算；看着亏比看着赚难受；压力分四段，影响学习和睡眠；<em>只有五倍以上配资再背着借款，压力才会爆。</em></p></article>
       <article><h3>像带团队一样分工</h3><p>Claude 写程序、文案和美术提示词，图像模型出图，我做判断。<em>每次先拿到美术提示词，生图和写代码同时进行</em>，最后一批 99 张新图一次性接进游戏。</p></article>
-      <article><h3>用自动化测试守住速度</h3><p>每一版发布前，用浏览器自动化把整局跑一遍：专注线、随机炒股线、十倍杠杆借贷线，确认没有报错、结局都能走到。<em>两天内迭代 25 个版本</em>，每一版都确认能从开局玩到结局。</p></article>
+      <article><h3>用自动化测试守住速度</h3><p>每一版发布前，用浏览器自动化把整局跑一遍：专注线、随机炒股线、十倍杠杆借贷线，确认没有报错、结局都能走到。<em>两天内迭代 27 个版本</em>，每一版都确认能从开局玩到结局。</p></article>
       <article><h3>试玩反馈直接落到机制</h3><p>「竞价时今日盈亏以开盘价为 0 轴」「压力太容易降」「换了发型日常立绘不变」——每条反馈都定位到具体的规则或数据，改完再跑一遍整局。</p></article>
       <article><h3>美术也有工程</h3><p>259 张图保持同一个人：角色设定图做参考，绿幕统一出图，脚本抠图、量化调色、生成换色遮罩，图片包按需加载。<em>人工只负责生成和挑图。</em></p></article>
     </div>
@@ -274,14 +287,39 @@ footer{padding-block:30px 46px;color:var(--muted);font-size:12.5px}
   <section id="numbers">
     <div class="stats">
       <div class="stat"><span class="v">6,000</span><span class="k">行，单文件网页，不依赖框架</span></div>
-      <div class="stat"><span class="v">384</span><span class="k">个函数</span></div>
+      <div class="stat"><span class="v">391</span><span class="k">个函数</span></div>
       <div class="stat"><span class="v up">259</span><span class="k">张 AI 美术</span></div>
       <div class="stat"><span class="v">53</span><span class="k">段多轮对话</span></div>
       <div class="stat"><span class="v">20</span><span class="k">个交易日</span></div>
       <div class="stat"><span class="v">6</span><span class="k">种结局，带跨周目记忆</span></div>
-      <div class="stat"><span class="v up">22</span><span class="k">个发布版本</span></div>
+      <div class="stat"><span class="v up">27</span><span class="k">个发布版本</span></div>
       <div class="stat"><span class="v">44</span><span class="k">条灵感，保留 26</span></div>
     </div>
+  </section>
+
+  <section id="endings">
+    <div class="sec-h"><h2>六种结局</h2><p>二十天之后，按你怎么过的，落到其中一种。</p></div>
+    <div class="ends">
+      <article class="end"><span class="tag">不下载 · 第三天进入</span><h3>专注结局<small>你没有下载那个软件</small></h3>
+        <p class="if"><b>怎么走到：</b>前三天不下载炒股软件。后面十七天按专注的样子过完，模拟考和实习各自结算。</p>
+        <blockquote>你守住的，是一个普通的明天。</blockquote></article>
+      <article class="end"><span class="tag">不下载 · 第二局起</span><h3>妈妈结局<small>妈妈的新手机</small></h3>
+        <p class="if"><b>怎么走到：</b>上一局亏过钱、看过妈妈那条帖子；这一局开局用八千块里的七千给妈妈买手机，前三天也不下载。</p>
+        <blockquote>你守住了自己的普通，并且创造了自己的幸福。</blockquote></article>
+      <article class="end win"><span class="tag">炒股 · 第二十天</span><h3>赚到了</h3>
+        <p class="if"><b>怎么走到：</b>第二十天，账户比开局涨了 3% 以上。</p>
+        <blockquote>六月，你坐在自习室里。课本摊开着。你看了一眼手机。只是一眼。</blockquote></article>
+      <article class="end flat"><span class="tag">炒股 · 第二十天</span><h3>回到原点</h3>
+        <p class="if"><b>怎么走到：</b>二十天涨涨跌跌，最后的盈亏在 3% 以内。</p>
+        <blockquote>你很努力。你研究了消息、盯了盘、算了仓位。但这些努力没有改善你的处境。</blockquote></article>
+      <article class="end loss"><span class="tag">炒股 · 第二十天</span><h3>亏掉了</h3>
+        <p class="if"><b>怎么走到：</b>第二十天，账户比开局跌了 3% 以上。</p>
+        <blockquote>你在想，如果再给你一次机会，你一定能赢回来。</blockquote></article>
+      <article class="end crash"><span class="tag">炒股 · 提前结束</span><h3>崩溃</h3>
+        <p class="if"><b>怎么走到：</b>开着 5 倍以上配资、又欠着网贷，压力涨到 100。不加杠杆、不借钱，压力最高停在 94，走不到这里。</p>
+        <blockquote>醒来的时候，第一件事是摸手机看盘。</blockquote></article>
+    </div>
+    <p class="ends-note">每一种结局之后都是同一份复盘报告：屏幕使用时间、周期真相图，以及「如果这些钱用在别的地方」。</p>
   </section>
 
   <section id="play">

@@ -273,6 +273,14 @@ button:focus-visible,label:focus-within{outline:2px solid var(--gold);outline-of
 
 /* 自习 */
 .seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:12px 18px 0;background:#e9e5dc;border-radius:12px;padding:4px}
+.nostk{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:12px 18px 0;padding:10px 12px;border-radius:12px;background:#f3efe6;border:1px solid #e2ded6}
+.nostk .nl{font-size:12px;color:#5d5866}
+.nostk .btn{display:grid;gap:2px;text-align:left;padding:8px 14px;border-radius:10px;font-size:13px;font-weight:700;color:#1d1c22;background:#fff;border:1px solid #d9d3c7}
+.nostk .btn small{font-size:11px;font-weight:400;color:#77727f}
+.nostk .btn:hover{border-color:#4f7fae}
+.nostk .btn:focus-visible{outline:2px solid #4f7fae;outline-offset:2px}
+.nostk.lib{background:#eef4ea;border-color:#c9dcc0}
+.nostk.lib .btn{border-color:#9cc28c}
 .seg button{padding:8px;border-radius:9px;font-size:13px;color:#5d5866}
 .seg button.on{background:#fff;color:#1d1c22;font-weight:700;box-shadow:0 1px 2px rgba(0,0,0,.08)}
 .study .goal.cur{outline:2px solid #4f7fae}
@@ -1804,12 +1812,14 @@ function endAuction(){
   S.stocks.forEach(s=>{ if(!s.delisted) s.price=s.path[0]; });
   S.phase="market"; S.minute=0; S.loc=S.hasClass?"class":"library";   // 9:30：有课去教室，没课去图书馆
   const orders=S.orders, keep=S.sel; S.orders=[]; const miss=[];
-  orders.forEach(o=>{ const op=stock(o.code).price; if(o.px!=null&&(o.kind==="buy"?o.px<op:o.px>op)){ miss.push(o); return; } S.sel=o.code; trade(o.kind,o.frac); });
+  let filled=0, queued=0, failed=0;
+  orders.forEach(o=>{ const op=stock(o.code).price; if(o.px!=null&&(o.kind==="buy"?o.px<op:o.px>op)){ miss.push(o); return; } S.sel=o.code;
+    const t0=S.trades.length, q0=S.queue.length; trade(o.kind,o.frac); if(S.trades.length>t0) filled++; else if(S.queue.length>q0) queued++; else failed++; });
   S.sel=keep; checkLines(true);
   runMarket();
   if(S.app==="stock"&&S.accountOpen) renderStock(); else if(S.lapApp==="home") renderHome();
   clkCue(S.installed.stock?"9:30 · 开盘":S.hasClass?"9:30 · 上课":"9:30 · 图书馆开门");
-  if(orders.length) showBanner("涨","涨涨证券",`9:25 集合竞价撮合完成：${orders.length-miss.length} 笔委托按开盘价报入成交${miss.length?`，${miss.length} 笔限价没到、已撤单`:""}。`,"stock");
+  if(orders.length) showBanner("涨","涨涨证券",`9:25 集合竞价撮合完成：${filled?`${filled} 笔按开盘价成交`:"没有成交"}${queued?`，${queued} 笔封板、在排队`:""}${failed?`，${failed} 笔没成交（钱不够一手，或没有可卖的）`:""}${miss.length?`，${miss.length} 笔限价没到、已撤单`:""}。`,"stock");
 }
 function aucPrice(s){ const k=S.aucPx||"mkt"; return k==="mkt"?null:k==="up"?+(s.prev*1.2).toFixed(2):k==="dn"?+(s.prev*0.8).toFixed(2):k==="cur"?+s.price.toFixed(2):null; }
 function placeAuction(kind,frac){
@@ -2118,7 +2128,7 @@ function updateChrome(){
   const mi=$("#mb-idx"); if(mi){ if(S.installed&&S.installed.stock&&["pre","market","auction","evening"].includes(S.phase)){ const r=idxChg(); mi.textContent=`综合指数 ${S.index.val.toFixed(2)} ${r>=0?"▲":"▼"}${Math.abs(r*100).toFixed(2)}%`; mi.className="mb-c "+(r>0?"up":r<0?"down":""); } else mi.textContent=""; }
   const dk=$("#dock"); if(dk&&!DAYPH.includes(S.phase)) dk.hidden=true;
   document.body.classList.toggle("atintro",S.phase==="intro");
-  updateClk(); updateHr();
+  updateClk(); updateHr(); noStkSync();
   const sat = Math.max(0.12, 1/(1+S.T/14));
   document.documentElement.style.setProperty("--lifeSat",sat.toFixed(3));
 }
@@ -2537,6 +2547,51 @@ function skipToClose(){
   S.closeSkips=(S.closeSkips||0)+1;
   setTimeout(()=>toast(`⏭ 快进了 ${hrs(S.minute-m0)} 小时${S.phase==="market"?"，停在了 "+clockStr(S.minute):" · 已经收盘"}`),300);
 }
+/* ============ 不打算看股市 ============
+   在「专注」里，盘前和集合竞价的时间照样算学习，只是不用干等：一直专注到 9:30 开盘。
+   超级心流（连续专注 ≥4 天，时间 ×2）的第二天起，如果空仓、也没挂单画线：直接在图书馆自习一整天，学到收盘。 */
+const superFlow=()=>(S.streak||0)>=4;
+const flatToday=()=>!Object.keys(S.hold).length;
+const tradePlans=()=>(S.orders||[]).length+todayLines().filter(l=>l.st==="wait").length;
+const noStkPhase=()=>S.installed.stock&&(S.phase==="pre"||S.phase==="auction");
+const libDayOK=()=>noStkPhase()&&superFlow()&&flatToday()&&!tradePlans();
+function morningStudy(){   // 把盘前和竞价剩下的分钟一口气按专注过完（不重画、不响铃）
+  if(S.phase==="pre"){ clearTimeout(preTimer); while(S.preMin<63){ S.preMin++; S.preStudy=(S.preStudy||0)+1; studyMinute(); } S.aucMin=1; }
+  else { clearTimeout(aucTimer); aucTimer=null; }
+  for(let t=Math.max(1,S.aucMin||1);t<=10;t++){ S.preStudy=(S.preStudy||0)+1; studyMinute(); }
+  S.aucMin=10; S.phase="auction";
+}
+function noStock(){
+  if(!noStkPhase()) return;
+  if(libDayOK()) return libraryDay();
+  const m0=S.todayStudy; S.skipClose=true;
+  try{ morningStudy(); } finally{ S.skipClose=false; }
+  if(S.noStkDay!==S.day){ S.noStkDay=S.day; S.noStkDays=(S.noStkDays||0)+1; }
+  endAuction(); studyLoc(); renderStudy(); updateChrome();
+  clkCue(`⏩ 不看盘 · 一直专注到 9:30 开盘 · 学了 ${S.todayStudy-m0} 分钟`);
+}
+function libraryDay(){
+  const m0=S.todayStudy;
+  S.libDay=S.day; S.libDays=(S.libDays||0)+1; if(S.noStkDay!==S.day){ S.noStkDay=S.day; S.noStkDays=(S.noStkDays||0)+1; }
+  S.app="study"; S.lapApp="study"; S.fast=false; S.skipClose=true;
+  try{
+    morningStudy();
+    S.skipClose=false; endAuction(); S.loc="library"; S.skipClose=true;   // 9:30 开盘：空仓、没有委托，你在图书馆
+    while(S.phase==="market"&&S.minute<MINUTES&&!S.paused){ S.app="study"; tickMinute(); }   // 和整天坐在「专注」里一样，只是不用干等
+  } finally { S.skipClose=false; }
+  if(S.phase==="market"){ S.app="study"; renderStudy(); updateChrome(); return; }   // 被别的事打断了（很少见）：剩下的时间照常走
+  S.loc="library"; renderStudy(); renderPhoneFocus(); renderDock(); updateChrome();
+  clkCue(`📚 在图书馆自习了一整天 · 学了 ${hrs(S.todayStudy-m0)} 小时 · 15:00`);
+  setTimeout(()=>toast(`超级心流第 ${S.streak} 天。今天一眼盘都没看，在图书馆从早学到闭馆前。`),600);
+}
+function noStkBar(){
+  if(!noStkPhase()) return "";
+  const lib=libDayOK(), why=superFlow()&&flatToday()&&tradePlans()?"你还有预埋单或画线单，今天还得开盘":"";
+  return `<div class="nostk${lib?" lib":""}" id="noStkBar"><span class="nl" id="noStkL">${noStkLabel()}</span>
+    <button class="btn" id="noStk" type="button">${lib?"直接在图书馆自习一整天":"不打算看股市"}<small>${lib?`超级心流第 ${S.streak} 天 · 空仓 · 不看盘，一直学到 15:00 收盘`:why||"跳过盘前和集合竞价，一直专注到 9:30 开盘"}</small></button></div>`;
+}
+function noStkLabel(){ return S.phase==="pre"?`${63-S.preMin} 分钟后集合竞价`:`集合竞价中 · 9:${15+Math.min(S.aucMin||0,14)}`; }
+function noStkSync(){ const b=document.getElementById("noStkBar"); if(!b) return; if(!noStkPhase()){ b.remove(); return; } const l=document.getElementById("noStkL"), t=noStkLabel(); if(l&&l.textContent!==t) l.textContent=t; }
 function skipPre(){ const m=63-S.preMin; clearInterval(preTimer); startAuction(); openApp(S.app==="lock"?"home":S.app); clkCue(`⏩ 跳过了 ${m} 分钟 · 现在 9:15`); }
 /* 跳过集合竞价：竞价按最终价格撮合，直接到 9:30 开盘 */
 function skipAuction(){ if(S.phase!=="auction") return; clearTimeout(aucTimer); aucTimer=null; S.aucMin=10; endAuction(); }
@@ -3079,6 +3134,7 @@ function renderChat(thread){
 function renderStudy(){
   const m=S.major, it=S.studyMode==="intern";
   setView(`<div class="h-app"><button class="back" id="bk" type="button" aria-label="关闭">‹</button><h2>专注</h2><span class="small" style="color:#77727f">${esc(m.name)}</span></div>
+    ${noStkBar()}
     <div class="seg"><button type="button" data-m="ky" class="${!it?"on":""}">考研复习</button><button type="button" data-m="intern" class="${it?"on":""}">准备实习</button></div>
     <div class="tm-where" id="tm-w"></div>
     <div class="mat ${it?"code":""}"><div class="mt"><i></i><i></i><i></i><span id="mat-t"></span></div><div class="mb"><b id="mat-b"></b>${[92,78,88,64,95,70,83,58].map((w,i)=>`<div class="ln ${i===2?"hl":""}" style="width:${w}%"></div>`).join("")}</div></div>
@@ -3087,6 +3143,7 @@ function renderStudy(){
     <div class="goal ${it?"cur":""}"><h3>实习 · ${esc(m.intern)}</h3><div id="it-rows"></div><div class="small" style="color:#77727f" id="it-note"></div></div>
     <p class="small" style="padding:0 18px 20px;color:#8a8592">番茄钟在右边的手机上计时。一个番茄 25 分钟，中途离开「专注」，这个番茄就作废。</p>`,"study");
   $("#bk").onclick=()=>openApp("home");
+  if($("#noStk")) $("#noStk").onclick=noStock;
   document.querySelectorAll(".seg button").forEach(b=>b.onclick=()=>{ S.studyMode=b.dataset.m; if(DAYPH.includes(S.phase)) studyLoc(); renderStudy(); });
   renderStudyLive();
 }
@@ -4641,7 +4698,8 @@ function showReport(){
     <section><h4>上课时间，你的注意力去了哪里</h4>
       ${apps.map(([nm,k,c])=>`<div class="row"><span>${nm}</span><span class="bar"><i style="width:${S.appTime[k]/totalMin*100}%;background:${c}"></i></span><span class="num">${hrs(S.appTime[k])} h</span></div>`).join("")}
       <p>其中有 <b class="num">${hrs(S.skipped)}</b> 小时，是你按下「加速看盘」快进掉的。${S.closeSkips?`有 ${S.closeSkips} 天，你直接快进到了收盘。`:""}</p>
-      <p>开盘前，你有 ${S.readDays.news} 天点开了财讯，${S.readDays.comm} 天点开了股友社区，一共在盘前读了 <b class="num">${hrs(S.preRead)}</b> 小时消息。</p></section>
+      <p>开盘前，你有 ${S.readDays.news} 天点开了财讯，${S.readDays.comm} 天点开了股友社区，一共在盘前读了 <b class="num">${hrs(S.preRead)}</b> 小时消息。</p>
+      ${S.noStkDays?`<p>有 ${S.noStkDays} 个早上，你说「不打算看股市」。${S.libDays?`其中 ${S.libDays} 天，你空仓、一眼盘都没看，在图书馆自习了一整天。`:""}</p>`:""}</section>
     <section><h4>账户</h4><div class="big ${ret>=0?"up":"down"}">${pct(ret)}</div>
       <p>${fmt(S.start)} → ${fmt(eq)}。手续费累计 ${fmt(S.fees)}，像一把锉刀，相当于打工 ${(S.fees/HOUR_WAGE).toFixed(1)} 小时。</p></section>
     <section><h4>你定的规矩</h4>

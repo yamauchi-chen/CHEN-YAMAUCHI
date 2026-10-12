@@ -1,3 +1,15 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="反赌博题材的炒股人生模拟网页游戏 Demo：考研、实习、炒股，二十个交易日里争夺同一份注意力。可在线试玩。">
+<meta property="og:type" content="website">
+<meta property="og:title" content="大三下的好时候｜独立游戏 Demo 作品集">
+<meta property="og:description" content="反赌博题材的炒股人生模拟网页游戏 Demo：考研、实习、炒股，二十个交易日里争夺同一份注意力。可在线试玩。">
+<meta property="og:image" content="https://yamauchi-chen.github.io/CHEN-YAMAUCHI/shots/market.jpg">
+<meta property="og:url" content="https://yamauchi-chen.github.io/CHEN-YAMAUCHI/">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2714%27 fill=%27%2317151d%27/%3E%3Cpath d=%27M12 44 L24 30 L33 37 L50 18%27 fill=%27none%27 stroke=%27%23f2b544%27 stroke-width=%276%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27/%3E%3C/svg%3E">
 <title>大三下的好时候作品集</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -7,7 +19,9 @@
 /* 版式：像游戏结尾的「复盘报告」——一张深夜书桌上的对账单。顶部一条行情带，正文是一页页报告。 */
 :root{
   --bg:#f4f1f8; --sheet:#ffffff; --sheet-2:#f8f6fb; --ink:#211c2b; --muted:#6c657a; --line:#dcd5e6;
-  --gold:#a8700f; --gold-ink:#1b1820; --up:#d23a43; --down:#1d8a53; --tape:#2a2435; --tape-ink:#ece6f4;
+  --gold:#94600b; --gold-ink:#1b1820;
+  --btn-bg:#ffffff; --btn-line:#a99bbf; --btn-ink:#211c2b; --btn-hover:#f1eafc;
+  --go-bg:#f2b544; --go-line:#d9961a; --go-hover:#f7c766; --go-glow:rgba(217,150,26,.34); --up:#d23a43; --down:#1d8a53; --tape:#2a2435; --tape-ink:#ece6f4;
   --shadow:0 18px 50px rgba(40,28,70,.12);
   --f-display:"ZCOOL QingKe HuangYou","Noto Sans SC",system-ui,sans-serif;
   --f-body:"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
@@ -15,15 +29,19 @@
 }
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
   --bg:#14111b; --sheet:#1d1827; --sheet-2:#231d2f; --ink:#ece6f4; --muted:#a49db4; --line:#352d45;
-  --gold:#f2b544; --gold-ink:#1b1820; --up:#ff5a62; --down:#3fd08a; --tape:#0d0b12; --tape-ink:#ece6f4;
+  --gold:#f2b544; --gold-ink:#1b1820;
+  --btn-bg:#2b2340; --btn-line:#5e507a; --btn-ink:#f3eefb; --btn-hover:#382d54;
+  --go-bg:#f2b544; --go-line:#f2b544; --go-hover:#ffc95e; --go-glow:rgba(242,181,68,.30); --up:#ff5a62; --down:#3fd08a; --tape:#0d0b12; --tape-ink:#ece6f4;
   --shadow:0 22px 60px rgba(0,0,0,.45); color-scheme:dark } }
 :root[data-theme="dark"]{
   --bg:#14111b; --sheet:#1d1827; --sheet-2:#231d2f; --ink:#ece6f4; --muted:#a49db4; --line:#352d45;
-  --gold:#f2b544; --gold-ink:#1b1820; --up:#ff5a62; --down:#3fd08a; --tape:#0d0b12; --tape-ink:#ece6f4;
+  --gold:#f2b544; --gold-ink:#1b1820;
+  --btn-bg:#2b2340; --btn-line:#5e507a; --btn-ink:#f3eefb; --btn-hover:#382d54;
+  --go-bg:#f2b544; --go-line:#f2b544; --go-hover:#ffc95e; --go-glow:rgba(242,181,68,.30); --up:#ff5a62; --down:#3fd08a; --tape:#0d0b12; --tape-ink:#ece6f4;
   --shadow:0 22px 60px rgba(0,0,0,.45); color-scheme:dark }
 *{box-sizing:border-box}
 [hidden]{display:none!important}
-body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.75}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.75}
 .wrap{max-width:1120px;margin:0 auto;padding-inline:20px}
 h1,h2,h3{text-wrap:balance;margin:0}
 h2{font-family:var(--f-display);font-weight:400;font-size:clamp(26px,3.4vw,34px);letter-spacing:.02em}
@@ -48,9 +66,13 @@ a{color:inherit}
 .hero .lede{margin-top:16px;font-size:16.5px;color:var(--ink);max-width:34em}
 .hero .who{margin-top:14px;font-size:13px;color:var(--muted)}
 .cta{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
-.btn{display:inline-flex;align-items:center;gap:8px;padding:11px 18px;border-radius:10px;font-weight:700;font-size:14.5px;text-decoration:none;border:1px solid var(--line);background:var(--sheet);color:var(--ink);cursor:pointer;font-family:inherit}
-.btn.go{background:var(--gold);border-color:var(--gold);color:var(--gold-ink)}
-.btn small{font-weight:500;opacity:.75;font-family:var(--f-mono);font-size:12px}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:11px 18px;border-radius:10px;font-weight:700;font-size:14.5px;text-decoration:none;border:1.5px solid var(--btn-line);background:var(--btn-bg);color:var(--btn-ink);cursor:pointer;font-family:inherit;box-shadow:0 2px 6px rgba(20,12,40,.10);transition:background .15s,border-color .15s,transform .15s}
+.btn:hover{background:var(--btn-hover);border-color:var(--go-line)}
+.btn:active{transform:translateY(1px)}
+.btn.go{background:var(--go-bg);border-color:var(--go-line);color:var(--gold-ink);box-shadow:0 8px 22px var(--go-glow)}
+.btn.go:hover{background:var(--go-hover);border-color:var(--go-line)}
+.btn small{font-weight:500;opacity:.8;font-family:var(--f-mono);font-size:12px}
+@media (prefers-reduced-motion:reduce){.btn{transition:none}}
 .shot{border-radius:12px;overflow:hidden;border:1px solid var(--line);box-shadow:var(--shadow);background:#000}
 .shot img{display:block;width:100%;height:auto}
 .hero .shot{transform:rotate(.6deg)}
@@ -68,8 +90,6 @@ section{padding-block:22px}
 .resume .k{font-weight:700}
 .resume ul{margin:0;padding-left:1.2em;display:grid;gap:6px}
 .resume li::marker{color:var(--gold)}
-.copybar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:6px}
-.copybar .ok{font-size:13px;color:var(--down)}
 
 /* 流程 */
 .steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
@@ -133,10 +153,10 @@ footer{padding-block:30px 46px;color:var(--muted);font-size:12.5px}
   <div class="row">
     <span>灵感库<b class="num">44</b></span><span>保留核心<b class="num up">▲26</b></span><span>候选<b class="num">17</b></span><span>搁置<b class="num dn">▼1</b></span>
     <span>评分维度<b class="num">7</b></span><span>机制标签<b class="num">13</b></span><span>人工化学判定<b class="num">52</b></span>
-    <span>AI 美术<b class="num g">233 张</b></span><span>多轮对话<b class="num">53 段</b></span><span>结局<b class="num">6 种</b></span><span>迭代<b class="num up">V22</b></span>
+    <span>AI 美术<b class="num g">259 张</b></span><span>多轮对话<b class="num">53 段</b></span><span>结局<b class="num">6 种</b></span><span>迭代<b class="num up">V24</b></span>
     <span class="dup" aria-hidden="true" style="display:contents"><span>灵感库<b class="num">44</b></span><span>保留核心<b class="num up">▲26</b></span><span>候选<b class="num">17</b></span><span>搁置<b class="num dn">▼1</b></span>
     <span>评分维度<b class="num">7</b></span><span>机制标签<b class="num">13</b></span><span>人工化学判定<b class="num">52</b></span>
-    <span>AI 美术<b class="num g">233 张</b></span><span>多轮对话<b class="num">53 段</b></span><span>结局<b class="num">6 种</b></span><span>迭代<b class="num up">V22</b></span></span>
+    <span>AI 美术<b class="num g">259 张</b></span><span>多轮对话<b class="num">53 段</b></span><span>结局<b class="num">6 种</b></span><span>迭代<b class="num up">V24</b></span></span>
   </div>
 </div>
 
@@ -158,7 +178,7 @@ footer{padding-block:30px 46px;color:var(--muted);font-size:12.5px}
 
   <section id="resume">
     <div class="sheet">
-      <div class="sec-h"><h2>项目描述</h2><p>简历可以直接用这一段。</p></div>
+      <div class="sec-h"><h2>项目描述</h2><p>背景、做法、产出，以及我怎么用 AI。</p></div>
       <div class="resume" id="resumeText">
         <h3>《大三下的好时候》：用 AI 搭建灵感评估流程，并做出可玩 Demo（个人项目 · 2026.10）</h3>
         <p><span class="k">项目背景：</span>独立游戏创作常卡在三处：灵感零散、设定前后冲突、做出来不确定有没有人想玩。本项目面向个人独立开发和小团队，以「反赌博主题的炒股人生模拟」为题材，用 AI 搭建从灵感沉淀、评估到可玩原型的完整流程。</p>
@@ -172,8 +192,8 @@ footer{padding-block:30px 46px;color:var(--muted);font-size:12.5px}
           </ul></div>
         <div><p class="k">产出：</p>
           <ul>
-            <li>可玩 Demo：单文件网页，约 5,800 行，迭代 22 个版本；每版发布前用自动化脚本跑完整局回归测试。</li>
-            <li>AI 美术 233 张，角色形象一致；自动抠图和换色遮罩，让一套姿势支持多种发色和服装。</li>
+            <li>可玩 Demo：单文件网页，约 5,800 行，迭代 24 个版本；每版发布前用自动化脚本跑完整局回归测试。</li>
+            <li>AI 美术 259 张，角色形象一致；自动抠图和换色遮罩，让一套姿势支持多种发色和服装。</li>
             <li>6 份文档（灵感总表、评分模型说明、评估报告、行情规则、美术需求、美术提示词手册），以及评分模型脚本（Python）。</li>
           </ul></div>
         <div><p class="k">我如何用 AI：</p>
@@ -183,7 +203,6 @@ footer{padding-block:30px 46px;color:var(--muted);font-size:12.5px}
             <li>用测试守住速度：两天内 20 多次迭代，每次发布前自动跑通整局。</li>
           </ul></div>
       </div>
-      <div class="copybar"><button class="btn" id="copyBtn" type="button">复制这段描述</button><span class="ok" id="copyOk" hidden>已复制</span></div>
     </div>
   </section>
 
@@ -233,7 +252,7 @@ footer{padding-block:30px 46px;color:var(--muted);font-size:12.5px}
 
   <section id="cast">
     <div class="sheet cast">
-      <div class="sec-h"><h2>同一个人，233 张图</h2><p>男女主角、舍友、场景、窗外，全部由 AI 图像模型按同一套提示词生成。</p></div>
+      <div class="sec-h"><h2>同一个人，259 张图</h2><p>男女主角、舍友、场景、窗外，全部由 AI 图像模型按同一套提示词生成。</p></div>
       <div class="shot"><img src="shots/cast.jpg" alt="主角立绘：原来的样子、剪了新发型、换了开衫衬衫；下排是赚钱、亏钱、心流、疲惫、麻木、担心的表情" loading="lazy" width="1800" height="800"></div>
       <p>上排：原来的样子、剪了新发型、换了一身开衫衬衫（男、女各一组）。下排：赚钱时手机的红光、亏钱时的绿光、心流、熬夜、麻木、担心。所有立绘先做角色设定图锁定长相，再统一绿幕出图；打包脚本自动抠图，并生成头发和衣服的遮罩。染发、换卫衣颜色不需要重新画图，一套姿势可以换 8 种发色、8 种衣服颜色。</p>
     </div>
@@ -245,17 +264,17 @@ footer{padding-block:30px 46px;color:var(--muted);font-size:12.5px}
       <article><h3>先建模型，再写代码</h3><p>灵感先进库、打分、算化学反应，再决定做什么。后来加的「附近好店」「借贷与配资」，也先问同一个问题：<em>它服务「反赌博」这个主题吗？</em>刺激可以加，代价必须跟着来。</p></article>
       <article><h3>把主题写进数值</h3><p>每一种刺激都有对应的代价：浮动金额按生活费换算；看着亏比看着赚难受；压力分四段，影响学习和睡眠；<em>只有五倍以上配资再背着借款，压力才会爆。</em></p></article>
       <article><h3>像带团队一样分工</h3><p>Claude 写程序、文案和美术提示词，图像模型出图，我做判断。<em>每次先拿到美术提示词，生图和写代码同时进行</em>，最后一批 99 张新图一次性接进游戏。</p></article>
-      <article><h3>用自动化测试守住速度</h3><p>每一版发布前，用浏览器自动化把整局跑一遍：专注线、随机炒股线、十倍杠杆借贷线，确认没有报错、结局都能走到。<em>两天内迭代 22 个版本</em>，每一版都确认能从开局玩到结局。</p></article>
+      <article><h3>用自动化测试守住速度</h3><p>每一版发布前，用浏览器自动化把整局跑一遍：专注线、随机炒股线、十倍杠杆借贷线，确认没有报错、结局都能走到。<em>两天内迭代 24 个版本</em>，每一版都确认能从开局玩到结局。</p></article>
       <article><h3>试玩反馈直接落到机制</h3><p>「竞价时今日盈亏以开盘价为 0 轴」「压力太容易降」「换了发型日常立绘不变」——每条反馈都定位到具体的规则或数据，改完再跑一遍整局。</p></article>
-      <article><h3>美术也有工程</h3><p>233 张图保持同一个人：角色设定图做参考，绿幕统一出图，脚本抠图、量化调色、生成换色遮罩，图片包按需加载。<em>人工只负责生成和挑图。</em></p></article>
+      <article><h3>美术也有工程</h3><p>259 张图保持同一个人：角色设定图做参考，绿幕统一出图，脚本抠图、量化调色、生成换色遮罩，图片包按需加载。<em>人工只负责生成和挑图。</em></p></article>
     </div>
   </section>
 
   <section id="numbers">
     <div class="stats">
       <div class="stat"><span class="v">5,800</span><span class="k">行，单文件网页，不依赖框架</span></div>
-      <div class="stat"><span class="v">368</span><span class="k">个函数</span></div>
-      <div class="stat"><span class="v up">233</span><span class="k">张 AI 美术</span></div>
+      <div class="stat"><span class="v">372</span><span class="k">个函数</span></div>
+      <div class="stat"><span class="v up">259</span><span class="k">张 AI 美术</span></div>
       <div class="stat"><span class="v">53</span><span class="k">段多轮对话</span></div>
       <div class="stat"><span class="v">20</span><span class="k">个交易日</span></div>
       <div class="stat"><span class="v">6</span><span class="k">种结局，带跨周目记忆</span></div>
@@ -291,13 +310,5 @@ footer{padding-block:30px 46px;color:var(--muted);font-size:12.5px}
   document.querySelectorAll('[data-big]').forEach(function(b){ b.addEventListener('click',function(){ im.src=b.getAttribute('data-big'); im.alt=(b.querySelector('img')||{}).alt||''; lb.hidden=false; }); });
   lb.addEventListener('click',function(){ lb.hidden=true; });
   document.addEventListener('keydown',function(e){ if(e.key==='Escape') lb.hidden=true; });
-  var btn=document.getElementById('copyBtn'), ok=document.getElementById('copyOk'), src=document.getElementById('resumeText');
-  function plain(){ var out=[]; src.querySelectorAll('h3,p,li').forEach(function(n){ var t=n.innerText.trim(); if(!t) return; out.push(n.tagName==='LI'?'· '+t:t); }); return out.join('\n'); }
-  btn.addEventListener('click',function(){
-    var text=plain();
-    var done=function(){ ok.hidden=false; setTimeout(function(){ ok.hidden=true; },2200); };
-    try{ navigator.clipboard.writeText(text).then(done,function(){ sel(); }); }catch(e){ sel(); }
-    function sel(){ var r=document.createRange(); r.selectNodeContents(src); var s=window.getSelection(); s.removeAllRanges(); s.addRange(r); ok.textContent='已选中，按 Ctrl+C 复制'; ok.hidden=false; }
-  });
 })();
 </script>

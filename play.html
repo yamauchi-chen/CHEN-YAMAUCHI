@@ -1594,7 +1594,7 @@ function genHistory(){
 function startDay(){
   const d=S.day;
   S.refocusLeft=0; S.sitMin=0; S.awayFromStudy=false; S.studyBreak=false; S.brokeToday=false; S.cryUntil=-1; S.noStudyToday=false; S.paused=false; S.frozen=false; S.focusSess=0; S.tomToday=0; S.tomLog=[]; S.flow=0; S.qSum=0; S.qN=0; S.lastQ=null; S.postsToday=0; S.itStart={proj:S.it.proj,emails:S.it.emails};
-  S.dayPeak=0; S.flipped=false; S.minute=0; S.hrMax=0; S.hrMaxAt=""; S.hrMaxApp=""; S.fast=false; S.todayStudy=0; S.todayEff=0; S.todayViolated=false; S.dayHaltBreached=false; S.hasClass=S.classDays.has(d); S.loc=S.hasClass?"class":"library"; S.stockStreak=0;
+  S.dayPeak=0; S.flipped=false; S.dayLev=curLev(); S.lossCapped=false; S.minute=0; S.hrMax=0; S.hrMaxAt=""; S.hrMaxApp=""; S.fast=false; S.todayStudy=0; S.todayEff=0; S.todayViolated=false; S.dayHaltBreached=false; S.hasClass=S.classDays.has(d); S.loc=S.hasClass?"class":"library"; S.stockStreak=0;
   if(S.rate.on && S.rate.plan==="month" && d>S.rate.since && (d-S.rate.since)%20===0){ S.cash-=500; S.rate.paid+=500; }   // 月费续费
   // 大盘
   const st=S.world.reg[d]||"平淡", R=REGIMES[st], idxRet=R.drift+R.vol*gauss(), volState=S.world.vols[d]||"平量";
@@ -1721,7 +1721,7 @@ function queueOrder(s,kind,f){
   if(S.queue.some(o=>o.code===s.code&&o.kind===kind)){ toast("这只已经在排队了"); return; }
   S.queue.push({id:String(Date.now())+ri(0,999),code:s.code,kind,frac:f,minute:S.minute,day:S.day});
   if(kind==="buy") toast(`${s.name} 涨停封板，买单进入排队，前面还有很多人`);
-  else { toast(`${s.name} 跌停封死，卖单排在几十万手后面`); S.stress=Math.min(stressCap(),S.stress+3); }
+  else { toast(`${s.name} 跌停封死，卖单排在几十万手后面`); lossStress(3); }
   if(S.app==="stock") renderStockLive(true);
 }
 function cancelQueue(id){ S.queue=S.queue.filter(o=>o.id!==id); toast("已撤单"); if(S.app==="stock") renderStockLive(true); }
@@ -1737,7 +1737,7 @@ function processQueue(){
       if(q) showBanner("涨","涨涨证券", sealed?`排队买单成交：${s.name} 以涨停价 ${lu.toFixed(2)} 买入 ${q} 股`:`${s.name} 炸板了。你排队的买单以涨停价 ${lu.toFixed(2)} 成交 ${q} 股，现价 ${s.price.toFixed(2)}`,"stock");
       return false; }
     const ld=s.prev*0.8, sealed=isLimDn(s);
-    if(sealed){ if((S.minute-o.minute)%30===29) S.stress=Math.min(stressCap(),S.stress+1.5); if(Math.random()>0.0005) return true; }
+    if(sealed){ if((S.minute-o.minute)%30===29) lossStress(1.5); if(Math.random()>0.0005) return true; }
     const q=execTrade(s,"sell",o.frac,ld,true);
     if(q) showBanner("涨","涨涨证券",`${s.name} 跌停板打开了一瞬。你的卖单以跌停价 ${ld.toFixed(2)} 成交 ${q} 股`,"stock");
     return false;
@@ -2018,6 +2018,18 @@ function planNow(){
 function goalGap(){ return planNow().gap; }
 function reliefF(){ return 1/(1+2.5*(S.gap||0)); }     // 落下越多，放松越不管用
 function stressAmp(){ return 1+1.2*(S.gap||0); }       // 落下越多，坏事越容易被放大
+/* 亏钱的压力看杠杆：仓位全是自己的钱，亏了顶多不痛快；借来的钱越多，越扛不住。
+   实际杠杆＝持仓市值 ÷ 账户净值；一天里按用过的最高倍数算（强平之后也不会突然轻松） */
+function curLev(){ const pv=posValue(), eq=equity(); return pv<=0?1:eq<=0?10:Math.max(1,Math.min(10,pv/eq)); }
+function lossLv(){ return Math.max(S.dayLev||1,curLev()); }
+function lossK(){ return Math.min(1,(lossLv()-1)/4); }                       // 1 倍 → 0，5 倍及以上 → 1
+function lossF(){ return 0.35+0.65*lossK()+0.06*Math.max(0,lossLv()-5); }  // 1 倍 0.35，2 倍约 0.5，5 倍 1，10 倍 1.3
+function lossCeil(){ return 55+(stressCap()-55)*lossK(); }                 // 不加杠杆：亏钱最多把你推到 55（紧绷）
+function lossStress(v){ if(!(v>0)) return 0; const f=lossF(), room=lossCeil()-S.stress;
+  if(room<=0){ S.lossCapped=true; return 0; }
+  const soft=lossK()<1? Math.min(1,room/12+0.15) : 1;   // 有封顶时，越接近上限涨得越慢；5 倍以上不减速
+  const add=Math.min(room, v*f*soft); if(add<v*f*0.99) S.lossCapped=true;
+  S.stress+=add; return add; }
 function planLine(){ const p=planNow(); return p.intern&&S.internState==="open"?`按计划，实习准备今天该到 ${Math.round(p.itExp*100)}%，你在 ${Math.round(p.itAct*100)}%`:`按计划，一轮今天该到 ${Math.round(p.kyExp*100)}%，你在 ${Math.round(p.kyAct*100)}%`; }
 function habitAdd(v,why){
   const o=S.habit||0, n=Math.max(0,Math.min(1,o+v)); S.habit=n;
@@ -2037,15 +2049,15 @@ function tickMinute(){
   S.appTime[a]++;
   if(!S.ffEndOn&&S.appTime.stock>=FF_END_MIN){ S.ffEndOn=true; setTimeout(()=>{ toast("累计看盘满 20 小时。看盘页面可以直接快进到收盘了。"); if(S.app==="stock"&&S.phase==="market") reStock(); },200); }
   if(S.fast){S.skipped++; }
-  { const dp=equity()-S.openEquity, r=Math.abs(dp)/DAILY_INCOME; S.dayPeak=Math.max(S.dayPeak||0,dp);
+  { const dp=equity()-S.openEquity, r=Math.abs(dp)/DAILY_INCOME; S.dayPeak=Math.max(S.dayPeak||0,dp); S.dayLev=Math.max(S.dayLev||1,curLev());
     if(!S.flipped && dp<0 && S.dayPeak>=DAILY_INCOME){   // 今天赚过至少一天生活费，现在翻成了亏
-      S.flipped=true; S.stress+=6*stressAmp(); hrKick(18);
+      S.flipped=true; lossStress(6*stressAmp()); hrKick(lossLv()>=1.5?18:8);
       const msg=`刚才还赚着 ${fmt(S.dayPeak)}，现在倒亏 ${fmt(-dp)}。`;
       if(a==="stock"){ toast(msg); sfx("down"); } else showBanner("涨","涨涨证券",`今日盈亏翻绿了：${msg}`,"stock"); }
     if(a==="stock"){
       if(dp>=0) S.stress-=0.003*Math.log(1+r)*(S.fast?1.5:1);   // 看着赚钱：压力不涨，还会松一点
       else { const fl=S.flipped? 2.5+2.5*Math.min(1,(S.dayPeak-dp)/DAILY_INCOME/3) : 1;   // 赚过又亏回去：比一直亏难受得多
-        S.stress+=((S.fast?0.016:0.01)+0.006*Math.log(1+r)*(S.fast?1.5:1)*1.6)*fl; } } }   // 看着亏比看着赚难受得多
+        lossStress(((S.fast?0.016:0.01)+0.006*Math.log(1+r)*(S.fast?1.5:1)*1.6)*fl); } } }   // 看着亏比看着赚难受得多
   if(a==="study") studyMinute();
   if(a==="stock"&&S.minute%30===0) habitAdd(-0.025);
   if(a==="stock" && S.loc==="class"){ if(++S.stockStreak>=120){ S.loc="dorm"; toast("你从教室溜回了宿舍"); } } else S.stockStreak=0;
@@ -3648,7 +3660,7 @@ const HARSH={
 const MOM_HURT={4:"最近复习怎么样？妈不多问，你别嫌烦。",7:"你爸说周末给你打电话。你要是忙，就不打了。",10:"妈不问了。你记得吃饭。",13:"天冷了。",16:"钱要是不够，跟你爸说也行。",19:"放假回来吗？不回也没关系。"};
 function moodNow(){
   const r=-todayPL()/DAILY_INCOME;
-  if(S.stress>=72 || (S.phase==="market"&&r>=10)) return "bad";
+  if(S.stress>=72 || (S.phase==="market"&&r>=10&&lossLv()>=1.5)) return "bad";
   if(S.stress>=50 || (S.phase==="market"&&r>=4)) return "meh";
   return "good";
 }
@@ -3784,13 +3796,14 @@ function closeMarket(){
   const gap=goalGap(); S.gap=gap;
   if(Math.abs(pl)>=DAILY_INCOME*10) S.numb=Math.min(1,(S.numb||0)+0.02);   // 一天的涨跌抵得上一个月生活费：几百块慢慢就不像钱了
   const peak=S.dayPeak||0, flipF=pl<0&&peak>=DAILY_INCOME? 1+Math.min(1,peak/DAILY_INCOME/2) : 1;   // 盘中赚过、收盘亏
-  if(pl<0) S.stress+=5*Math.log(1+r)*watchF*(1+0.15*S.spend+0.6*(S.numb||0))*stressAmp()*flipF;
+  S.dayLev=Math.max(S.dayLev||1,curLev());
+  if(pl<0) lossStress(5*Math.log(1+r)*watchF*(1+0.15*S.spend+0.6*(S.numb||0))*stressAmp()*flipF);   // 亏钱：乘上杠杆系数，不加杠杆封顶 55
   else S.stress-=1.2*Math.log(1+r)*reliefF();   // 赚钱的日子：压力不涨，还会松一点（计划落下太多时松得少）
   if(flipF>1) S.flipDays=(S.flipDays||0)+1;
   const wasUp=(S.hist.at(-1)||{eq:S.start}).eq>=S.start*1.01, nowDown=eq<S.start;   // 前一天收盘还赚着，今天跌破本金
-  if(wasUp&&nowDown) S.stress+=8*stressAmp();
+  if(wasUp&&nowDown) lossStress(8*stressAmp());
   const gapSt=8*gap*(1+d/12); S.stress+=gapSt;   // 计划落下得越多、日子越往后，越慌
-  if(S.T>=8 && r<S.T*0.2){ if(pl<0) S.stress+=5; empty=true; }
+  if(S.T>=8 && r<S.T*0.2){ if(pl<0) lossStress(5); empty=true; }
   const levLines=[]; levClose(levLines);
   const oldT=S.T; S.T=Math.max(S.T*0.985,r);
   // 隐藏属性：盯盘残留。近几天盯盘越久，学习和实习效率越低（玩家看不到数值）
@@ -3812,6 +3825,9 @@ function closeMarket(){
   const lines=[];
   if(flipF>1) lines.push(`今天最多赚过 ${fmt(peak)}，收盘却亏了 ${fmt(-pl)}。从赚到亏，比一直亏更难受。`);
   if(wasUp&&nowDown) lines.push("前几天账户还是赚的，今天跌破了本金。");
+  if(pl<0&&r>=3){ const L=S.dayLev||1;
+    if(L<1.2) lines.push(vary("ownMoney",[`亏了 ${fmt(-pl)}，心里不太痛快。好在没借钱，不会被平仓，也没人催你还。`,"今天亏了，有点烦。但仓位里没有借来的钱，至少今晚睡得着。","亏的是自己的生活费。不高兴，但还扛得住。"]));
+    else if(L>=1.5) lines.push(`仓位里有借来的钱（今天最多约 ${L.toFixed(1)} 倍）。同样跌一下，心里沉得多。`); }
   if(empty) lines.push(`今天的浮动只有 ${r.toFixed(1)} 天生活费。你几乎没有感觉，反而坐立不安。`);
   lines.push(...levLines);
   if(gap>=0.08) lines.push(`${planLine()}。${gap>=0.4?"差得太多了。你一想到这个，胸口就发紧。":gap>=0.2?"越往后，越慌。":"落下了一点。"}`);
@@ -3820,7 +3836,7 @@ function closeMarket(){
   if(S.T>oldT && r>=10) lines.push(`这是你到目前为止波动最大的一天。`);
   // 到收盘还没成交的排队单：当日有效，全部作废
   S.queue.filter(o=>o.day===d).forEach(o=>{ const t=stock(o.code);
-    if(o.kind==="sell"){ lines.push(`${t.name}的跌停板一整天都没有打开。你挂着的卖单一股都没卖出去。明天开盘，它可能还是跌停。`); S.stress=Math.min(stressCap(),S.stress+6); }
+    if(o.kind==="sell"){ lines.push(`${t.name}的跌停板一整天都没有打开。你挂着的卖单一股都没卖出去。明天开盘，它可能还是跌停。`); lossStress(6); }
     else lines.push(`${t.name}封得很死，你的买单排了${o.minute<60?"一整天":"一下午"}，没有排到。`); });
   S.queue=[];
   S._close={d,eq,pl,r,before,oldT,watchMin,watchF,lines};
@@ -5320,8 +5336,8 @@ function mood(sc){
   if(sc.mood) return sc.mood;
   const pl=todayPL(), r=Math.abs(pl)/DAILY_INCOME;
   if(S.stress>=88) return "blank";
-  if(S.phase==="market"&&S.queue&&S.queue.some(o=>o.kind==="sell")) return "panic";   // 跌停卖不出去
-  if(sc.app==="stock"&&S.phase==="market"&&r>=5) return pl>0?"excited":"panic";
+  if(S.phase==="market"&&S.queue&&S.queue.some(o=>o.kind==="sell")) return lossLv()>=1.5?"panic":"worried";   // 跌停卖不出去
+  if(sc.app==="stock"&&S.phase==="market"&&r>=5) return pl>0?"excited":lossLv()>=1.5?"panic":"worried";
   if(S.stress>=78) return "panic";
   if(S.tired) return "tired";
   if(S.stress>=55) return "worried";

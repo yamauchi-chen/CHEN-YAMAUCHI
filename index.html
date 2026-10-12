@@ -153,10 +153,10 @@ footer{padding-block:30px 46px;color:var(--muted);font-size:12.5px}
   <div class="row">
     <span>灵感库<b class="num">44</b></span><span>保留核心<b class="num up">▲26</b></span><span>候选<b class="num">17</b></span><span>搁置<b class="num dn">▼1</b></span>
     <span>评分维度<b class="num">7</b></span><span>机制标签<b class="num">13</b></span><span>人工化学判定<b class="num">52</b></span>
-    <span>AI 美术<b class="num g">259 张</b></span><span>多轮对话<b class="num">53 段</b></span><span>结局<b class="num">6 种</b></span><span>迭代<b class="num up">V24</b></span>
+    <span>AI 美术<b class="num g">259 张</b></span><span>多轮对话<b class="num">53 段</b></span><span>结局<b class="num">6 种</b></span><span>迭代<b class="num up">V25</b></span>
     <span class="dup" aria-hidden="true" style="display:contents"><span>灵感库<b class="num">44</b></span><span>保留核心<b class="num up">▲26</b></span><span>候选<b class="num">17</b></span><span>搁置<b class="num dn">▼1</b></span>
     <span>评分维度<b class="num">7</b></span><span>机制标签<b class="num">13</b></span><span>人工化学判定<b class="num">52</b></span>
-    <span>AI 美术<b class="num g">259 张</b></span><span>多轮对话<b class="num">53 段</b></span><span>结局<b class="num">6 种</b></span><span>迭代<b class="num up">V24</b></span></span>
+    <span>AI 美术<b class="num g">259 张</b></span><span>多轮对话<b class="num">53 段</b></span><span>结局<b class="num">6 种</b></span><span>迭代<b class="num up">V25</b></span></span>
   </div>
 </div>
 
@@ -192,7 +192,7 @@ footer{padding-block:30px 46px;color:var(--muted);font-size:12.5px}
           </ul></div>
         <div><p class="k">产出：</p>
           <ul>
-            <li>可玩 Demo：单文件网页，约 5,800 行，迭代 24 个版本；每版发布前用自动化脚本跑完整局回归测试。</li>
+            <li>可玩 Demo：单文件网页，约 6,000 行，迭代 25 个版本；每版发布前用自动化脚本跑完整局回归测试。</li>
             <li>AI 美术 259 张，角色形象一致；自动抠图和换色遮罩，让一套姿势支持多种发色和服装。</li>
             <li>6 份文档（灵感总表、评分模型说明、评估报告、行情规则、美术需求、美术提示词手册），以及评分模型脚本（Python）。</li>
           </ul></div>
@@ -231,6 +231,7 @@ footer{padding-block:30px 46px;color:var(--muted);font-size:12.5px}
           <tr><td class="id">I17</td><td>终局复盘报告</td><td class="sc">81.7<span class="tier s">S</span></td><td>结局后列出番茄、心率峰值、时间账单、手续费、借贷利息，以及「如果这些钱用在别的地方」。</td></tr>
           <tr><td class="id">I37</td><td>下载门槛 + 专注结局</td><td class="sc">79.5<span class="tier a">A</span></td><td>前三天不下载炒股软件，直接进入专注结局；后面十七天按专注的样子过完。</td></tr>
           <tr><td class="id">I42</td><td>涨跌停排队</td><td class="sc">75.0<span class="tier a">A</span></td><td>涨停买不进、跌停卖不出、一字跌停连板；配资账户跌几个点就被强平。</td></tr>
+          <tr><td class="id">I44</td><td>画 K 线下条件单</td><td class="sc">72.0<span class="tier a">A</span></td><td>候选灵感，作为另一种下单方式加进来，原来的买卖不变：盘前在日K上画一条线，碰到就自动成交，画完可以去学习。画在涨停价上的买单只能排队，止损线碰到了也可能因为 T+1 卖不掉。</td></tr>
         </tbody>
       </table></div>
     </div>
@@ -264,7 +265,7 @@ footer{padding-block:30px 46px;color:var(--muted);font-size:12.5px}
       <article><h3>先建模型，再写代码</h3><p>灵感先进库、打分、算化学反应，再决定做什么。后来加的「附近好店」「借贷与配资」，也先问同一个问题：<em>它服务「反赌博」这个主题吗？</em>刺激可以加，代价必须跟着来。</p></article>
       <article><h3>把主题写进数值</h3><p>每一种刺激都有对应的代价：浮动金额按生活费换算；看着亏比看着赚难受；压力分四段，影响学习和睡眠；<em>只有五倍以上配资再背着借款，压力才会爆。</em></p></article>
       <article><h3>像带团队一样分工</h3><p>Claude 写程序、文案和美术提示词，图像模型出图，我做判断。<em>每次先拿到美术提示词，生图和写代码同时进行</em>，最后一批 99 张新图一次性接进游戏。</p></article>
-      <article><h3>用自动化测试守住速度</h3><p>每一版发布前，用浏览器自动化把整局跑一遍：专注线、随机炒股线、十倍杠杆借贷线，确认没有报错、结局都能走到。<em>两天内迭代 24 个版本</em>，每一版都确认能从开局玩到结局。</p></article>
+      <article><h3>用自动化测试守住速度</h3><p>每一版发布前，用浏览器自动化把整局跑一遍：专注线、随机炒股线、十倍杠杆借贷线，确认没有报错、结局都能走到。<em>两天内迭代 25 个版本</em>，每一版都确认能从开局玩到结局。</p></article>
       <article><h3>试玩反馈直接落到机制</h3><p>「竞价时今日盈亏以开盘价为 0 轴」「压力太容易降」「换了发型日常立绘不变」——每条反馈都定位到具体的规则或数据，改完再跑一遍整局。</p></article>
       <article><h3>美术也有工程</h3><p>259 张图保持同一个人：角色设定图做参考，绿幕统一出图，脚本抠图、量化调色、生成换色遮罩，图片包按需加载。<em>人工只负责生成和挑图。</em></p></article>
     </div>
@@ -272,8 +273,8 @@ footer{padding-block:30px 46px;color:var(--muted);font-size:12.5px}
 
   <section id="numbers">
     <div class="stats">
-      <div class="stat"><span class="v">5,800</span><span class="k">行，单文件网页，不依赖框架</span></div>
-      <div class="stat"><span class="v">372</span><span class="k">个函数</span></div>
+      <div class="stat"><span class="v">6,000</span><span class="k">行，单文件网页，不依赖框架</span></div>
+      <div class="stat"><span class="v">384</span><span class="k">个函数</span></div>
       <div class="stat"><span class="v up">259</span><span class="k">张 AI 美术</span></div>
       <div class="stat"><span class="v">53</span><span class="k">段多轮对话</span></div>
       <div class="stat"><span class="v">20</span><span class="k">个交易日</span></div>

@@ -426,6 +426,26 @@ button:focus-visible,label:focus-within{outline:2px solid var(--gold);outline-of
 .queue .qi.sell{border-color:rgba(39,179,107,.5)}
 .queue .qi.buy{border-color:rgba(239,74,82,.5)}
 .queue .btn{padding:4px 10px;font-size:12px;flex:none}
+/* 画线下单 */
+.chartbox.drawing canvas{height:220px;cursor:ns-resize;touch-action:none}
+.ctabs em.new{font-style:normal;font-size:10px;color:#1a1205;background:var(--gold);border-radius:4px;padding:0 4px;margin-left:5px}
+.drawbox{margin:0 18px 8px;padding:10px 12px;border-radius:10px;background:#1b1a24;border:1px solid #3a3646;display:grid;gap:8px;font-size:12.5px;line-height:1.6;color:var(--ink)}
+.drawbox .dl-h b{font-family:var(--f-mono);color:var(--gold);font-weight:600}
+.drawbox .small{color:#b9b4c8}
+.dl-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.dl-row .lab{flex:1 1 100%;color:#cfcadb}
+.dl-row button{padding:5px 11px;font-size:12px;border-radius:8px;border:1px solid #4a4558;color:var(--ink);background:#23212d}
+.dl-row button:hover{background:#2e2b3b}
+.dl-row button.b{border-color:rgba(242,181,68,.75);color:#f6c766}
+.dl-row button.s{border-color:rgba(143,195,232,.75);color:#aad6f2}
+.dl-warn{font-size:12px;color:#ffc2b0}
+.lines{display:grid;gap:6px;padding:0 18px 8px}
+.lines .ln-h{font-size:12px;color:#b9b4c8;padding-top:2px}
+.lines .ln{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:12px;line-height:1.55;padding:8px 10px;border-radius:10px;background:#1b1a24;border:1px solid #3a3646}
+.lines .ln.buy{border-left:3px solid #f2b544}.lines .ln.sell{border-left:3px solid #8fc3e8}
+.lines .ln .st{color:#b9b4c8}.lines .ln.done .st{color:#9fe0b8}.lines .ln.fail .st,.lines .ln.queue .st{color:#ffc2b0}
+.lines .ln-go{color:inherit;text-decoration:underline;text-underline-offset:2px;font:inherit;padding:0;background:none;border:0;cursor:pointer}
+.lines .btn{padding:4px 10px;font-size:12px;flex:none}
 .chartbox canvas{cursor:crosshair}
 /* 画面设置 */
 .gear{position:fixed;top:14px;right:16px;z-index:45;font-size:12px;color:#d9d4e6;background:rgba(20,18,28,.55);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:6px 12px;backdrop-filter:blur(8px)}
@@ -553,6 +573,18 @@ button:focus-visible,label:focus-within{outline:2px solid var(--gold);outline-of
 .lap-screen::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:40;background:linear-gradient(115deg,rgba(255,255,255,.07) 0%,rgba(255,255,255,0) 32%)}
 .lap-base{position:relative;height:16px;margin:0 -6%;border-radius:2px 2px 16px 16px/2px 2px 12px 12px;background:linear-gradient(180deg,#d9d5e2 0%,#a9a4b6 55%,#6e6a7b 100%);box-shadow:0 10px 30px rgba(0,0,0,.4)}
 .lap-base i{position:absolute;left:50%;top:0;width:15%;height:5px;transform:translateX(-50%);border-radius:0 0 8px 8px;background:#8d889b}
+/* 翻盖：开局时翻开，结局时合上。屏幕绕底边转向自己，合上后只剩一道深色的盖子压在底座上 */
+.lap-lid{transform-origin:50% 100%;transform:perspective(5200px) rotateX(0deg);transition:transform 1.3s cubic-bezier(.5,0,.2,1)}
+.lap-lid::after{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(180deg,#2c2836 0%,#121017 100%);opacity:0;pointer-events:none;z-index:60;transition:opacity .9s ease .35s}
+.laptop.shut .lap-lid{transform:perspective(5200px) rotateX(-88deg);pointer-events:none}
+.laptop.shut .lap-lid::after{opacity:1;transition:opacity .55s ease 0s}
+.lid-card{position:absolute;left:50%;bottom:calc(16px + 14%);transform:translateX(-50%);width:min(320px,86%);padding:18px 20px;border-radius:14px;background:rgba(20,18,27,.9);border:1px solid rgba(242,181,68,.45);box-shadow:0 18px 40px rgba(0,0,0,.45);text-align:center;display:grid;gap:10px;color:var(--ink);animation:lidcard .5s ease both;z-index:5}
+.lid-card[hidden]{display:none}
+.lid-card .eyebrow{color:#b9b4c8}
+.lid-card .lc-t{font-family:var(--f-display);font-size:28px;line-height:1.2;color:var(--life)}
+.lid-card .lc-b{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+@keyframes lidcard{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}
+@media (prefers-reduced-motion:reduce){.lap-lid,.lap-lid::after,.laptop.shut .lap-lid::after{transition-duration:.01s;transition-delay:0s}.lid-card{animation:none}}
 .menubar{position:absolute;top:0;left:0;right:0;height:26px;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:0 12px;font-size:11.5px;color:#ece8f4;background:rgba(16,14,24,.48);backdrop-filter:blur(12px);z-index:30}
 .menubar .mb-l,.menubar .mb-r{display:flex;align-items:center;gap:10px;white-space:nowrap}
 .menubar .mb-l b,.menubar #mb-app{font-weight:700}
@@ -1068,7 +1100,7 @@ body.resizing .stage,body.resizing .deskcol{transition:none}
         <div class="w-note" id="hrNote">平静</div>
         <div class="w-st" id="wSt"><span>压力</span><i class="seg"><b></b><b></b><b></b><b></b></i><em id="wStN">放松</em></div></div></div>
     </div>
-    <div class="laptop" id="laptop">
+    <div class="laptop shut" id="laptop">
       <div class="lap-lid"><span class="lap-cam"></span>
         <div class="lap-screen" id="screen">
           <div class="menubar"><span class="mb-l"><i class="mb-dot"></i><span id="mb-app">桌面</span></span><span class="mb-c" id="mb-idx"></span><span class="mb-r"><button type="button" class="mb-max" id="mb-max" title="放大电脑（也可以在「画面」里调）">⤢</button><span id="sb-day">大三下 · 第 1 天</span><b class="num" id="sb-time">8:12</b><span class="num" id="sb-batt">87%</span></span></div>
@@ -1079,6 +1111,7 @@ body.resizing .stage,body.resizing .deskcol{transition:none}
         </div>
       </div>
       <div class="lap-base"><i></i></div>
+      <div class="lid-card" id="lidCard" hidden></div>
     </div>
   </div></main>
   <aside class="side right" id="sideR" aria-label="手机">
@@ -1270,7 +1303,7 @@ function newGame(){
     day:1, phase:"intro", minute:0, fast:false, app:"home", sel:null,
     cash:START, start:START, hold:{}, leverage:false, fees:0, openEquity:START, boughtPhone:false,
     stocks:[], themes:{}, watch:[], open:new Set(), clears:[], stockTab:"mkt", creditLine:0, orders:[], aucMin:0,
-    look:{gender:"m",name:"",style:0,hair:0,eye:0,hood:0,cut:0,fit:0,glasses:false,mole:true,art:!!window.ART_DATA}, album:[], queue:[],
+    look:{gender:"m",name:"",style:0,hair:0,eye:0,hood:0,cut:0,fit:0,glasses:false,mole:true,art:!!window.ART_DATA}, album:[], queue:[], lines:[], lineStat:{drawn:0,filled:0,failed:0,limit:0,near:0,t1:0},
     installed:{stock:false,news:false,comm:false,loan:false,pz:false}, loans:[], pz:null, pzFees:0, loanFees:0, watchStreak:0, flow:0, flowMax:0, flowCount:0, qSum:0, qN:0, circle:[], fans:{stock:0,study:0}, postLog:[], socTab:"follow", accountOpen:false, frozen:false, dl:{}, lean:null, focusSess:0, tomToday:0, tomTotal:0, tomFail:0, tomLog:[], dayFocus:{},
     rate:{on:false,plan:null,paid:0,extra:0,since:0}, studyMode:"ky", loc:"class", todayEff:0, stockStreak:0, riskLevel:"", quizScore:0, mockNoise:0, known:new Set(), knownDay:{},
     stress:22, T:0, hist:[], residue:0, eff:1, studyNom:0, studyEff:0, selfType:"", principles:[],
@@ -1762,7 +1795,7 @@ function endAuction(){
   S.phase="market"; S.minute=0; S.loc=S.hasClass?"class":"library";   // 9:30：有课去教室，没课去图书馆
   const orders=S.orders, keep=S.sel; S.orders=[]; const miss=[];
   orders.forEach(o=>{ const op=stock(o.code).price; if(o.px!=null&&(o.kind==="buy"?o.px<op:o.px>op)){ miss.push(o); return; } S.sel=o.code; trade(o.kind,o.frac); });
-  S.sel=keep;
+  S.sel=keep; checkLines(true);
   runMarket();
   if(S.app==="stock"&&S.accountOpen) renderStock(); else if(S.lapApp==="home") renderHome();
   clkCue(S.installed.stock?"9:30 · 开盘":S.hasClass?"9:30 · 上课":"9:30 · 图书馆开门");
@@ -1787,6 +1820,108 @@ function aucBox(){
 function cancelOrder(id){
   if(S.phase==="auction"&&S.aucMin>=5){toast("9:20 之后不能撤单");return}
   S.orders=S.orders.filter(o=>o.id!==id); toast("已撤单"); renderStock();
+}
+
+/* ============ 画线下单：在日K上画今天的一条价格线，碰到就自动买卖 ============ */
+/* 只看今天的最高价、最低价有没有碰到线：线在现价上方是「涨到这里」，在下方是「跌到这里」。
+   碰线按线价成交；开盘就跳过了线，按开盘价成交。涨停封板买不进、跌停封死卖不出，只能去排队；今天买的今天不能卖（T+1）。
+   原来的买卖按钮、预埋单都不变，画线是另一种下单方式：画完就可以去学习。 */
+const LINE_T={
+  brk:{n:"突破买",kind:"buy",dir:"up",hint:"涨到这里就买入"},
+  dip:{n:"回落买",kind:"buy",dir:"dn",hint:"跌到这里就买入"},
+  tp:{n:"止盈",kind:"sell",dir:"up",hint:"涨到这里就卖出"},
+  sl:{n:"止损",kind:"sell",dir:"dn",hint:"跌到这里就卖出"},
+};
+const LINE_F={buy:{0.25:"¼",0.5:"½",1:"全仓"},sell:{0.5:"½",1:"全部"}};
+let KSC=null;   // 画线模式下日K的坐标，用来把鼠标位置换成价格
+const canDraw=()=>S.phase==="pre"||S.phase==="market";
+const todayLines=code=>(S.lines||[]).filter(l=>l.day===S.day&&l.st!=="cancel"&&(!code||l.code===code));
+const limUpPx=s=>Math.floor(s.prev*1.2*100+1e-6)/100, limDnPx=s=>Math.ceil(s.prev*0.8*100-1e-6)/100;
+function lineClamp(s,p){ return Math.min(limUpPx(s),Math.max(limDnPx(s),Math.round(p*100)/100)); }
+function reStock(){ const v=$("#view"), y=v?v.scrollTop:0; renderStock(); if(v) v.scrollTop=y; }
+function placeLine(type,frac){
+  const pl=S.pendLine, s=pl&&stock(pl.code), T=LINE_T[type]; if(!s||!T) return;
+  if(!canDraw()){ toast("现在不能画线：盘前或开盘后再来"); return; }
+  if(s.delisted){ toast("已退市，无法交易"); return; }
+  S.lines.push({id:String(Date.now())+ri(0,999),code:s.code,day:S.day,px:pl.px,type,kind:T.kind,dir:T.dir,frac,st:"wait",best:null,warned:false,last:s.price});
+  S.lineStat.drawn++; S.pendLine=null;
+  toast(`已画线：${T.n}${LINE_F[T.kind][frac]} · ${s.name} ${pl.px.toFixed(2)}。${T.hint}，只在今天有效`); sfx("click");
+  reStock();
+}
+function checkLines(atOpen){
+  if(S.phase!=="market") return;
+  todayLines().filter(l=>l.st==="wait").forEach(l=>{
+    const s=stock(l.code), T=LINE_T[l.type];
+    if(!s||s.delisted){ l.st="fail"; l.note="已退市"; return; }
+    const cur=s.price, prv=atOpen?null:l.last; l.last=cur;
+    const hit = l.dir==="up"? cur>=l.px-1e-9 : cur<=l.px+1e-9;
+    if(!hit){
+      const gap=l.dir==="up"?(l.px-cur)/l.px:(cur-l.px)/l.px; l.best=l.best==null?gap:Math.min(l.best,gap);
+      if(gap<=0.01&&!l.warned){ l.warned=true; if(S.app!=="stock") showBanner("涨","涨涨证券",`${s.name} 离你画的「${T.n}」线只差 ${(gap*100).toFixed(1)}%（线 ${l.px.toFixed(2)}，现价 ${cur.toFixed(2)}）`,"stock"); }
+      return; }
+    const gapped = prv==null || (l.dir==="up"? prv>=l.px : prv<=l.px);
+    lineFire(l,s,gapped?cur:l.px,gapped&&atOpen);
+  });
+}
+function lineWhy(l,s){ const h=S.hold[s.code];
+  if(l.kind==="buy") return isLimUp(s)?"涨停封板，排队也没排上":"钱不够买一手";
+  if(!h||!h.qty) return "手里没有这只股票";
+  if(h.qty-(h.todayQty||0)<=0) return "今天买的今天不能卖（T+1）";
+  return isLimDn(s)?"跌停封死，卖单排不上":"没有可卖的股票"; }
+function lineFire(l,s,px,atOpen){
+  const T=LINE_T[l.type], tm=clockStr(S.minute), act=l.kind==="buy"?"买入":"卖出"; l.at=tm; l.best=0;
+  if(l.kind==="buy"? isLimUp(s) : isLimDn(s)){   // 碰线的时候正好封板：只能去排队
+    const n=S.queue.length; queueOrder(s,l.kind,l.frac);
+    if(S.queue.length>n){ l.st="queue"; l.note=`${tm} 碰线时${l.kind==="buy"?"已经涨停封板，买单":"已经跌停封死，卖单"}转去排队`; S.lineStat.limit++; }
+    else { l.st="fail"; l.note=lineWhy(l,s); S.lineStat.failed++; if(/T\+1/.test(l.note)) S.lineStat.t1++; }
+    return; }
+  const q=execTrade(s,l.kind,l.frac,px,true);
+  if(q){ l.st="done"; l.qty=q; l.note=`${tm} ${atOpen?"开盘就跳过了线，按开盘价":"碰线，按线价"} ${px.toFixed(2)} ${act} ${q} 股`; S.lineStat.filled++; S.alertBase[s.code]=s.price;
+    showBanner("涨","涨涨证券",`画线单成交：「${T.n}」${s.name} ${px.toFixed(2)} ${act} ${q} 股`,"stock"); }
+  else { l.st="fail"; l.note=lineWhy(l,s); S.lineStat.failed++; if(/T\+1/.test(l.note)) S.lineStat.t1++;
+    showBanner("涨","涨涨证券",`「${T.n}」线碰到了，没成交：${l.note}`,"stock"); }
+}
+function expireLines(){ todayLines().forEach(l=>{ if(l.st==="wait"){ l.st="exp"; if(l.best!=null&&l.best<=0.01) S.lineStat.near++; } }); S.pendLine=null; }
+function lineRows(){
+  const L=todayLines(); if(!L.length) return "";
+  return `<div class="ln-h">今天画的线</div>`+L.map(l=>{ const s=stock(l.code), T=LINE_T[l.type], near=l.best!=null&&l.best>0?(l.best*100).toFixed(1)+"%":"";
+    const st = l.st==="wait"? `等待碰线${near?` · 最近差 ${near}`:""}` : l.st==="done"? `已成交 · ${l.note}` : l.st==="queue"? l.note : l.st==="fail"? `没成交 · ${l.at||""} ${l.note}` : `收盘也没碰到${near?` · 最近只差 ${near}`:""}`;
+    return `<div class="ln ${l.kind} ${l.st}"><span><b>${T.n} ${LINE_F[l.kind][l.frac]}</b> · <button type="button" class="ln-go" data-lgo="${l.code}">${esc(s.name)}</button> · ${l.px.toFixed(2)}（${pct(l.px/s.prev-1)}）<br><span class="st">${st}</span></span>${l.st==="wait"&&canDraw()?`<button class="btn" type="button" data-lnc="${l.id}">撤线</button>`:""}</div>`; }).join("");
+}
+function renderDrawBox(){
+  const el=$("#drawbox"); if(!el) return; const s=stock(S.sel); if(!s) return;
+  if(!canDraw()){ el.innerHTML=`<div class="dl-h">${S.phase==="auction"?"集合竞价中。画好的线 9:30 开盘后开始生效。":"收盘了。今天画的线已经作废，明天开盘前再来画。"}</div>`; return; }
+  if(s.delisted){ el.innerHTML=`<div class="dl-h">${esc(s.name)} 已退市，不能画线。</div>`; return; }
+  const pl=S.pendLine&&S.pendLine.code===s.code?S.pendLine:null;
+  if(!pl){ el.innerHTML=`<div class="dl-h">在图上<b>按住、上下拖</b>，定一个今天的价格；松手后选碰到这条线时做什么。</div><div class="small">只看今天的最高价、最低价有没有碰到线：碰到就按线价自动成交，不用一直盯着，画完可以去学习。线只在今天有效。</div>`; return; }
+  const up=pl.px>=s.price, bt=up?"brk":"dip", st=up?"tp":"sl", B=LINE_T[bt], X=LINE_T[st], h=S.hold[s.code], sellable=h?h.qty-(h.todayQty||0):0;
+  const lu=limUpPx(s), ld=limDnPx(s), w=[];
+  if(up&&pl.px>=lu-0.005) w.push("线就在涨停价上：碰到的时候多半已经封板，买单只能排队。");
+  if(!up&&pl.px<=ld+0.005) w.push("线就在跌停价上：碰到的时候多半已经封死，卖单排不上。");
+  if(sellable<=0) w.push(h&&h.qty?"你手里的这只都是今天买的：T+1，今天碰到卖出线也卖不了。":"你现在没有这只股票：卖出线碰到了也不会成交。");
+  if(S.phase==="pre") w.push("如果开盘直接跳过这条线，会按开盘价成交。");
+  el.innerHTML=`<div class="dl-h">线价 <b>${pl.px.toFixed(2)}</b>（较昨收 ${pct(pl.px/s.prev-1)}）· 在现价 ${s.price.toFixed(2)} ${up?"上方":"下方"}</div>
+    <div class="dl-row"><span class="lab">${B.hint}（${B.n}）</span>${[[0.25,"买 ¼"],[0.5,"买 ½"],[1,"全仓"]].map(([f,t])=>`<button type="button" class="b" data-lt="${bt}" data-lf="${f}">${t}</button>`).join("")}</div>
+    <div class="dl-row"><span class="lab">${X.hint}（${X.n}）</span>${[[0.5,"卖 ½"],[1,"全部可卖"]].map(([f,t])=>`<button type="button" class="s" data-lt="${st}" data-lf="${f}">${t}</button>`).join("")}</div>
+    ${w.map(t=>`<div class="dl-warn">${t}</div>`).join("")}
+    <div class="dl-row"><button type="button" data-lnd="-1">▼ 下移 0.5%</button><button type="button" data-lnd="1">▲ 上移 0.5%</button><button type="button" data-lnx="1">不画了</button></div>`;
+}
+function bindDraw(cv){
+  cv.style.touchAction="none";
+  const yAt=e=>e.clientY-cv.getBoundingClientRect().top;
+  const pxAt=y=>{ const k=KSC, s=stock(S.sel); if(!k||!s) return null; return lineClamp(s,k.hi-(y-k.top)/(k.ph-k.top)*(k.hi-k.lo)); };
+  let drag=false;
+  cv.addEventListener("pointerdown",e=>{
+    if(!canDraw()){ toast(S.phase==="auction"?"集合竞价中不能画线，9:30 开盘后再画":"收盘了，明天开盘前再来画"); return; }
+    const s=stock(S.sel); if(!s||s.delisted) return; const p=pxAt(yAt(e)); if(p==null) return;
+    drag=true; try{ cv.setPointerCapture(e.pointerId); }catch(_){}
+    S.pendLine={code:S.sel,px:p}; S.hoverY=null; drawChart(s); renderDrawBox(); });
+  cv.addEventListener("pointermove",e=>{ const y=yAt(e);
+    if(drag){ const p=pxAt(y); if(p!=null&&S.pendLine){ S.pendLine.px=p; drawChart(stock(S.sel)); const hb=document.querySelector("#drawbox .dl-h b"); if(hb) hb.textContent=p.toFixed(2); } }
+    else { S.hoverY=y; drawChart(stock(S.sel)); } });
+  const end=()=>{ if(drag){ drag=false; renderDrawBox(); } };
+  cv.addEventListener("pointerup",end); cv.addEventListener("pointercancel",end);
+  cv.addEventListener("pointerleave",()=>{ if(!drag){ S.hoverY=null; drawChart(stock(S.sel)); } });
 }
 
 /* 在自习里坐的每一分钟，真正学进去多少，取决于专注力、睡眠和压力；盘前、竞价、盘中都算 */
@@ -1891,7 +2026,7 @@ function tickMinute(){
   if(a==="stock" && S.loc==="class"){ if(++S.stockStreak>=120){ S.loc="dorm"; toast("你从教室溜回了宿舍"); } } else S.stockStreak=0;
   S.stress=Math.min(stressCap(),S.stress);
   S.stocks.forEach(s=>s.price=s.path[S.minute]); S.index.val=S.index.path[S.minute];
-  processQueue(); glowKick=1;
+  processQueue(); checkLines(false); glowKick=1;
   // 杠杆强平
   if(levNow()>1 && posValue()>0 && equity()<posValue()*({2:0.3,5:0.13,10:0.07}[levNow()]||0.3)){
     const wasPz=!!S.pz;
@@ -2078,8 +2213,31 @@ $("#screen").addEventListener("pointerdown",e=>{
 },true);
 $("#screen").addEventListener("click",e=>{ if(performance.now()-swallowT<600){ swallowT=0; e.preventDefault(); e.stopPropagation(); } },true);
 
+/* ============ 翻盖：开局时翻开，结局时合上 ============ */
+let lidT=0;
+function lidSet(open,done,delay){
+  const L=$("#laptop"); clearTimeout(lidT);
+  if(!L){ if(done) done(); return; }
+  const ms=matchMedia("(prefers-reduced-motion: reduce)").matches?80:1350;
+  lidT=setTimeout(()=>{
+    const shut=!open, already=L.classList.contains("shut")===shut;
+    if(open){ const c=$("#lidCard"); if(c) c.hidden=true; }
+    L.classList.toggle("shut",shut);
+    if(shut&&!already) setTimeout(()=>sfx("lid"),Math.max(0,ms-260));
+    lidT=setTimeout(()=>{ lidT=0; if(done) done(); }, already?0:ms);
+  },delay||0);
+}
+/* 结局：屏幕上留一句话，合上电脑，再把报告铺开；合上的电脑上放「再看一遍 / 再来一次」 */
+function endLid(title,showRep,again){
+  const c=$("#lidCard");
+  if(c){ c.innerHTML=`<div class="eyebrow">二十天过去了</div><div class="lc-t">${esc(title)}</div><div class="lc-b"><button class="btn primary" type="button" data-lc="rep">再看一遍</button><button class="btn" type="button" data-lc="again">再来一次</button></div>`;
+    c.onclick=e=>{ const b=e.target.closest("[data-lc]"); if(!b) return; if(b.dataset.lc==="rep") showRep(); else again(); }; }
+  lidSet(false,()=>{ if(c) c.hidden=false; showRep(); },500);
+}
+
 /* ============ 开场与问卷 ============ */
 function renderIntro(){
+  lidSet(true,null,450);
   S.phase="intro";
   setView(`
     <div class="eyebrow">DEMO · 20 天</div>
@@ -2524,6 +2682,8 @@ function renderClears(){
 function renderStock(){
   if(S.stockTab==="pos") return renderPositions();
   if(S.stockTab==="clr") return renderClears();
+  if(S.phase==="pre"&&S.accountOpen&&!S.lineTip){ S.lineTip=1; setTimeout(()=>toast("新玩法「✎ 画线下单」：开盘前在日K上画一条线，今天碰到就自动买卖，画完可以去学习"),700); }
+  const DR=S.chartMode==="draw", dbox=DR?`<div class="drawbox" id="drawbox"></div>`:"";
   const offerMargin = S.day>=3 && !S.leverage && !S.pz;
   setView(`
     <div class="h-app"><button class="back" id="bk" type="button" aria-label="返回">‹</button><h2>涨涨证券</h2>${levNow()>1?`<span class="marginbadge ${levNow()>=5?"hot":""}">${S.pz?"配资":"融资"} ${levNow()}×</span>`:""}</div>
@@ -2540,12 +2700,13 @@ function renderStock(){
     ${S.phase==="pre"?`<div class="aucbox"><div class="auctit">盘前 · 9:15 开始集合竞价</div><p class="small">现在可以预埋单：选好股票和委托价，点下面的买卖按钮，9:15 自动报入集合竞价；9:20 之前都能撤。</p>${aucBox()}</div>`:""}
     <ul class="slist" id="slist">${favRows()}${S.watch.map(k=>{const n=S.stocks.filter(s=>s.theme===k).length, op=S.open.has(k); return `<li class="th"><button type="button" data-t="${k}" aria-expanded="${op}"><span><i class="chev">${op?"▾":"▸"}</i>${TH(k).name}${TH(k).isNew?`<em class="new">新</em>`:""}<span class="cnt">${n} 只</span></span><span class="num" id="tc-${k}"></span></button></li>`+S.stocks.filter(s=>s.theme===k).map(s=>`<li data-g="${k}" ${op?"":"hidden"}><button type="button" data-c="${s.code}"><span><div class="nm">${s.name}</div><div class="cd">${s.code} · 评级 ${S.rate.on?s.rating:"🔒"}${s.bad?" · 连续亏损":""}${s.delisted?" · 已退市":""}</div></span><span class="px" id="px-${s.code}"></span><span class="pc" id="pc-${s.code}"></span></button></li>`).join("")}).join("")}
       <li><button type="button" class="addth" id="addth">＋ 添加板块</button></li><li><button type="button" class="addth" id="addst">＋ 搜索股票，加入自选</button></li></ul>
-    ${S.phase==="pre"?`<div class="chartbox"><canvas id="cv" width="360" height="150" aria-label="分时图"></canvas></div>`:S.phase==="auction"?`<div class="aucbox"><div class="auctit" id="auc-st"></div>
+    ${S.phase==="pre"?`<div class="chartbox${DR?" drawing":""}"><canvas id="cv" width="360" height="150" aria-label="${DR?"日K 画线":"分时图"}"></canvas></div>${dbox}`:S.phase==="auction"?`<div class="aucbox"><div class="auctit" id="auc-st"></div>
       <p class="small">9:15–9:20 可以挂单、撤单；9:20–9:25 只能挂单，不能撤单；9:25 撮合出开盘价：「开盘价成交」一定成交，限价买单要高于开盘价、限价卖单要低于开盘价才成交，没成交的自动撤单。前五分钟的竞价价格常常是虚的。</p>
       ${aucBox()}</div>`
-    :`<div class="chartbox"><canvas id="cv" width="360" height="150" aria-label="行情图"></canvas></div>`}
+    :`<div class="chartbox${DR?" drawing":""}"><canvas id="cv" width="360" height="150" aria-label="${DR?"日K 画线":"行情图"}"></canvas></div>${dbox}`}
     <div class="pos" id="pos"></div>
     <div class="queue" id="queue"></div>
+    <div class="lines" id="lines"></div>
     <div class="pad favrow" style="padding-top:0;padding-bottom:6px"><button class="btn" id="favBtn" type="button"></button><button class="btn" id="info" type="button">查看公司资料</button></div>
     <div class="trade">
       <button class="b" data-k="buy" data-f="0.25" type="button">买 ¼</button><button class="b" data-k="buy" data-f="0.5" type="button">买 ½</button><button class="b" data-k="buy" data-f="1" type="button">全仓</button>
@@ -2558,7 +2719,7 @@ function renderStock(){
     const t=e.target.closest("button[data-t]");
     if(t){const k=t.dataset.t, op=!S.open.has(k); op?S.open.add(k):S.open.delete(k); t.setAttribute("aria-expanded",op); t.querySelector(".chev").textContent=op?"▾":"▸";
       document.querySelectorAll(`#slist li[data-g="${k}"]`).forEach(li=>li.hidden=!op); return;}
-    const b=e.target.closest("button[data-c]"); if(b){S.sel=b.dataset.c; renderStockLive(true);}};
+    const b=e.target.closest("button[data-c]"); if(b){S.sel=b.dataset.c; if(S.chartMode==="draw"){ S.pendLine=null; renderDrawBox(); } renderStockLive(true);}};
   $("#addth").onclick=openAddTheme; $("#addst").onclick=openAddStock;
   $("#favBtn").onclick=()=>{ toggleFav(S.sel); renderStock(); };
   $("#info").onclick=()=>openInfo(S.sel);
@@ -2569,11 +2730,21 @@ function renderStock(){
   document.querySelectorAll("[data-oid]").forEach(b=>b.onclick=()=>cancelOrder(b.dataset.oid));
   $("#ffb").onclick=()=>{S.fast=!S.fast; renderStockLive(true);};
   $("#queue").onclick=e=>{ const b=e.target.closest("[data-q]"); if(b) cancelQueue(b.dataset.q); };
-  const cvh=$("#cv"); if(cvh){ const mv=e=>{ const r=cvh.getBoundingClientRect(), x=(e.touches?e.touches[0].clientX:e.clientX)-r.left; S.hoverX=x; drawChart(stock(S.sel)); };
+  const cvh=$("#cv"); if(cvh&&DR) bindDraw(cvh); else if(cvh){ const mv=e=>{ const r=cvh.getBoundingClientRect(), x=(e.touches?e.touches[0].clientX:e.clientX)-r.left; S.hoverX=x; drawChart(stock(S.sel)); };
     cvh.addEventListener("mousemove",mv); cvh.addEventListener("touchmove",mv,{passive:true});
     const off=()=>{ S.hoverX=null; drawChart(stock(S.sel)); }; cvh.addEventListener("mouseleave",off); cvh.addEventListener("touchend",off); }
-  const cb=document.querySelector(".chartbox"); if(cb){ const t=document.createElement("div"); t.className="ctabs"; t.innerHTML=`<button type="button" data-cm="min" class="${S.chartMode!=="day"?"on":""}">分时</button><button type="button" data-cm="day" class="${S.chartMode==="day"?"on":""}">日K · 近 60 日</button>`; cb.prepend(t);
-    t.onclick=e=>{const b=e.target.closest("[data-cm]"); if(!b) return; S.chartMode=b.dataset.cm; t.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b)); renderStockLive(true);}; }
+  const cb=document.querySelector(".chartbox"); if(cb){ const t=document.createElement("div"); t.className="ctabs"; const cm=S.chartMode||"min";
+    t.innerHTML=`<button type="button" data-cm="min" class="${cm==="min"?"on":""}">分时</button><button type="button" data-cm="day" class="${cm==="day"?"on":""}">日K · 近 60 日</button><button type="button" data-cm="draw" class="${cm==="draw"?"on":""}">✎ 画线下单${S.lineSeen?"":`<em class="new">新</em>`}</button>`; cb.prepend(t);
+    t.onclick=e=>{const b=e.target.closest("[data-cm]"); if(!b) return; const was=S.chartMode; S.chartMode=b.dataset.cm; if(S.chartMode==="draw") S.lineSeen=true;
+      if(was==="draw"||S.chartMode==="draw"){ S.pendLine=null; S.hoverY=null; reStock(); return; }
+      t.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b)); renderStockLive(true);}; }
+  renderDrawBox();
+  const dbx=$("#drawbox"); if(dbx) dbx.onclick=e=>{ const b=e.target.closest("button"); if(!b) return;
+    if(b.dataset.lt){ placeLine(b.dataset.lt,+b.dataset.lf); return; }
+    if(b.dataset.lnd&&S.pendLine){ const ps=stock(S.pendLine.code); S.pendLine.px=lineClamp(ps,S.pendLine.px*(1+0.005*+b.dataset.lnd)); drawChart(stock(S.sel)); renderDrawBox(); return; }
+    if(b.dataset.lnx){ S.pendLine=null; drawChart(stock(S.sel)); renderDrawBox(); } };
+  $("#lines").onclick=e=>{ const c=e.target.closest("[data-lnc]"); if(c){ const l=(S.lines||[]).find(x=>x.id===c.dataset.lnc); if(l&&l.st==="wait"){ l.st="cancel"; toast("已撤线"); reStock(); } return; }
+    const g=e.target.closest("[data-lgo]"); if(g){ S.sel=g.dataset.lgo; S.pendLine=null; reStock(); } };
   if($("#mg")) $("#mg").onclick=()=>{S.leverage=true; S.creditLine=Math.max(0,S.openEquity); deviate("P3","开通了融资"); renderStock();};
   renderStockLive(true);
 }
@@ -2619,6 +2790,7 @@ function renderStockLive(full){
   $("#pos").innerHTML = `<span>${s.name} · 昨收 ${s.prev.toFixed(2)}${lim}</span><span>${h?`持仓 ${h.qty} 股（可卖 ${h.qty-(h.todayQty||0)}）· 成本 ${h.cost.toFixed(2)} · <b class="${s.price>=h.cost?"up":"down"}">${fmt((s.price-h.cost)*h.qty)}</b>`:"未持仓"}</span>`;
   const qe=$("#queue"); if(qe) qe.innerHTML=S.queue.map(o=>{ const t=stock(o.code), buy=o.kind==="buy", px=buy?t.prev*1.2:t.prev*0.8, waited=S.minute-o.minute;
     return `<div class="qi ${o.kind}"><span>排队${buy?"买入":"卖出"} ${t.name} · ${buy?"涨停价":"跌停价"} ${px.toFixed(2)} · 已排 ${waited} 分钟${(buy?isLimUp(t):isLimDn(t))?` · 前面还有约 ${fengDan(t)>=10000?(fengDan(t)/10000).toFixed(1)+" 万":fengDan(t)} 手`:""}</span><button class="btn" type="button" data-q="${o.id}">撤单</button></div>`; }).join("");
+  const le=$("#lines"); if(le){ const lh=lineRows(); if(le._h!==lh){ le._h=lh; le.innerHTML=lh; } }
   const as=$("#auc-st"); if(as){ as.textContent = `集合竞价 9:${15+Math.min(S.aucMin,14)} · ${S.aucMin<5?"可以撤单":"不能撤单"} · 下方价格为竞价匹配价`; if(S.aucMin>=5) document.querySelectorAll("[data-oid]").forEach(b=>b.disabled=true);
     const cb=document.querySelector('[data-apx="cur"]'), cs=S.sel&&stock(S.sel); if(cb&&cs){ const t="现价 "+cs.price.toFixed(2); if(cb.textContent!==t) cb.textContent=t; } }
   const ff=$("#ffb"); ff.classList.toggle("on",S.fast); ff.textContent=S.fast?"⏩ 加速中 ×4":"⏩ 加速看盘";
@@ -2627,26 +2799,52 @@ function renderStockLive(full){
 }
 function drawKChart(s){
   const cv=$("#cv"); if(!cv) return;
-  const dpr=window.devicePixelRatio||1, w=cv.clientWidth||360, h=150;
-  if(cv.width!==Math.round(w*dpr)){cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);}
+  const DR=S.chartMode==="draw", dpr=window.devicePixelRatio||1, w=cv.clientWidth||360, h=DR?220:150;
+  if(cv.width!==Math.round(w*dpr)||cv.height!==Math.round(h*dpr)){cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);}
   const g=cv.getContext("2d"); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,w,h);
   let ks=s.k.slice(-60);
   if(S.phase==="market"&&!s.delisted){ const p=s.path.slice(0,S.minute+1); ks=[...ks.slice(-59),{o:p[0],h:Math.max(...p),l:Math.min(...p),c:s.price,v:0,today:true}]; }
+  else if(DR&&(S.phase==="pre"||S.phase==="auction")&&!s.delisted) ks=[...ks.slice(-59),{empty:true,today:true}];   // 盘前：今天这根K线还是空的
+  const real=ks.filter(k=>!k.empty), band=DR&&!s.delisted&&["pre","auction","market"].includes(S.phase);
+  const LN=DR?todayLines(s.code):[], pend=DR&&S.pendLine&&S.pendLine.code===s.code?S.pendLine:null;
   const n=ks.length, pw=w-44, ph=h*0.7, vh=h*0.18, vy=h-vh-12;
-  const hi=Math.max(...ks.map(x=>x.h)), lo=Math.min(...ks.map(x=>x.l)), Y=v=>6+(hi-v)/(hi-lo||1)*(ph-6), cwid=pw/n;
-  const vmax=Math.max(...ks.map(x=>x.v||0))||1;
+  let hi=Math.max(...real.map(x=>x.h)), lo=Math.min(...real.map(x=>x.l));
+  if(DR){ const ex=[...LN.map(l=>l.px),...(pend?[pend.px]:[]),...(band?[s.prev*1.2,s.prev*0.8]:[])]; if(ex.length){ hi=Math.max(hi,...ex); lo=Math.min(lo,...ex); } const pad=(hi-lo)*0.03; hi+=pad; lo-=pad; }
+  const Y=v=>6+(hi-v)/(hi-lo||1)*(ph-6), cwid=pw/n;
+  KSC=DR?{hi,lo,top:6,ph}:null;
+  const vmax=Math.max(...real.map(x=>x.v||0))||1;
   g.strokeStyle="#2e2b3a"; g.lineWidth=1; [0.25,0.5,0.75].forEach(f=>{ g.beginPath(); g.moveTo(0,6+f*(ph-6)); g.lineTo(pw,6+f*(ph-6)); g.stroke(); });
-  ks.forEach((k,i)=>{ const x=i*cwid+cwid/2, up=k.c>=k.o, col=up?"#ef4a52":"#27b36b";
+  if(band){   // 今天能走到的范围：涨停价到跌停价
+    const yu=Y(s.prev*1.2), yd=Y(s.prev*0.8); g.fillStyle="rgba(242,181,68,.05)"; g.fillRect(0,yu,pw,yd-yu);
+    [[limUpPx(s),"涨停","#ef4a52"],[s.prev,"","#8a8598"],[limDnPx(s),"跌停","#27b36b"]].forEach(([v,t,c])=>{ const y=Y(v);
+      g.strokeStyle=c; g.globalAlpha=.7; g.setLineDash([2,4]); g.beginPath(); g.moveTo(0,y); g.lineTo(pw,y); g.stroke(); g.setLineDash([]); g.globalAlpha=1;
+      g.font="10px IBM Plex Mono, monospace"; g.textAlign="left"; g.fillStyle=c; g.fillText(v.toFixed(2),pw+4,y+3);
+      if(t){ g.font="10px Noto Sans SC, sans-serif"; g.textAlign="right"; g.fillText(t,pw-3,y+(t==="跌停"?12:-4)); } }); }
+  ks.forEach((k,i)=>{ const x=i*cwid+cwid/2;
+    if(k.empty){ g.strokeStyle="rgba(242,181,68,.7)"; g.setLineDash([3,3]); g.strokeRect(x-cwid*0.45,8,cwid*0.9,ph-10); g.setLineDash([]); return; }
+    const up=k.c>=k.o, col=up?"#ef4a52":"#27b36b";
     g.strokeStyle=col; g.beginPath(); g.moveTo(x,Y(k.h)); g.lineTo(x,Y(k.l)); g.stroke();
     const bw=Math.max(1,cwid*0.65), y1=Y(Math.max(k.o,k.c)), y2=Y(Math.min(k.o,k.c));
     g.fillStyle=col; g.fillRect(x-bw/2,y1,bw,Math.max(1,y2-y1));
     if(k.v){ const vhh=k.v/vmax*vh; g.globalAlpha=.55; g.fillRect(x-bw/2,vy+vh-vhh,bw,vhh); g.globalAlpha=1; }
     if(k.today){ g.strokeStyle="#f2b544"; g.strokeRect(x-bw/2-1.5,Y(k.h)-2,bw+3,Y(k.l)-Y(k.h)+4); } });
-  const ma=(len,col)=>{ g.strokeStyle=col; g.lineWidth=1.2; g.beginPath(); let st=false; ks.forEach((k,i)=>{ if(i<len-1) return; const a=ks.slice(i-len+1,i+1).reduce((t,x)=>t+x.c,0)/len; const x=i*cwid+cwid/2; st?g.lineTo(x,Y(a)):(g.moveTo(x,Y(a)),st=true); }); g.stroke(); };
+  const ma=(len,col)=>{ g.strokeStyle=col; g.lineWidth=1.2; g.beginPath(); let st=false; ks.forEach((k,i)=>{ if(i<len-1||k.empty) return; const a=ks.slice(i-len+1,i+1).reduce((t,x)=>t+x.c,0)/len; const x=i*cwid+cwid/2; st?g.lineTo(x,Y(a)):(g.moveTo(x,Y(a)),st=true); }); g.stroke(); };
   ma(5,"#f2d06b"); ma(20,"#b48ce0");
   g.fillStyle="#7d7890"; g.font="10px IBM Plex Mono, monospace"; g.textAlign="left";
-  g.fillText(hi.toFixed(2),pw+4,12); g.fillText(lo.toFixed(2),pw+4,ph); g.fillText("MA5",4,h-2); g.fillStyle="#b48ce0"; g.fillText("MA20",34,h-2);
-  g.fillStyle="#7d7890"; g.textAlign="right"; g.fillText(S.phase==="market"?"今天":"昨天",pw,h-2); g.textAlign="center"; g.fillText("60 个交易日",pw/2,h-2);
+  if(!band){ g.fillText(hi.toFixed(2),pw+4,12); g.fillText(lo.toFixed(2),pw+4,ph); } g.fillText("MA5",4,h-2); g.fillStyle="#b48ce0"; g.fillText("MA20",34,h-2);
+  g.fillStyle="#7d7890"; g.textAlign="right"; g.fillText(S.phase==="market"||ks.at(-1).empty?"今天":"昨天",pw,h-2); g.textAlign="center"; g.fillText("60 个交易日",pw/2,h-2);
+  if(DR){
+    if(band){ const y=Y(s.price); g.fillStyle="#ece8f2"; g.beginPath(); g.moveTo(pw,y); g.lineTo(pw+5,y-4); g.lineTo(pw+5,y+4); g.closePath(); g.fill(); }
+    const tag=(t,y,col)=>{ g.font="10.5px Noto Sans SC, sans-serif"; const tw=g.measureText(t).width+10, ty=Math.max(16,Math.min(ph-2,y-4)); g.fillStyle="rgba(18,17,24,.9)"; g.fillRect(4,ty-11,tw,15); g.fillStyle=col; g.textAlign="left"; g.fillText(t,9,ty); };
+    LN.forEach(l=>{ const y=Y(l.px), col=l.kind==="buy"?"#f2b544":"#8fc3e8", T=LINE_T[l.type], on=l.st==="wait";
+      g.strokeStyle=col; g.globalAlpha=on?1:.6; g.lineWidth=on?1.4:1; g.setLineDash(on?[6,4]:[]); g.beginPath(); g.moveTo(0,y); g.lineTo(pw,y); g.stroke(); g.setLineDash([]); g.lineWidth=1;
+      tag(`${T.n} ${LINE_F[l.kind][l.frac]} ${l.px.toFixed(2)}${{done:" ✓ 已成交",fail:" ✕ 没成交",queue:" 排队中",exp:" 没碰到"}[l.st]||""}`,y,col); g.globalAlpha=1; });
+    if(pend){ const y=Y(pend.px), up=pend.px>=s.price; g.strokeStyle="#ffffff"; g.lineWidth=1.8; g.beginPath(); g.moveTo(0,y); g.lineTo(pw,y); g.stroke(); g.lineWidth=1;
+      tag(`${pend.px.toFixed(2)}（${pct(pend.px/s.prev-1)}）${up?"涨到这里":"跌到这里"}`,y,"#ffffff"); }
+    else if(canDraw()&&S.hoverY!=null&&S.hoverY>=6&&S.hoverY<=ph){ const p=lineClamp(s,hi-(S.hoverY-6)/(ph-6)*(hi-lo)), y=Y(p);
+      g.strokeStyle="rgba(236,232,242,.4)"; g.setLineDash([3,3]); g.beginPath(); g.moveTo(0,y); g.lineTo(pw,y); g.stroke(); g.setLineDash([]);
+      g.fillStyle="rgba(18,17,24,.9)"; g.fillRect(pw+1,y-8,43,15); g.fillStyle="#ece8f2"; g.font="10px IBM Plex Mono, monospace"; g.textAlign="left"; g.fillText(p.toFixed(2),pw+4,y+3); }
+    return; }
   if(S.hoverX!=null && S.hoverX>=0 && S.hoverX<pw){   // 悬停：这一天的开高低收、涨跌幅、振幅、成交额
     const i=Math.max(0,Math.min(n-1,Math.floor(S.hoverX/cwid))), k=ks[i], x=i*cwid+cwid/2;
     const base=s.k.length-(ks.at(-1).today?59:60), idx=base+i, day=idx-59;
@@ -2661,7 +2859,7 @@ function drawKChart(s){
   }
 }
 function drawChart(s){
-  if(S.chartMode==="day") return drawKChart(s);
+  if(S.chartMode==="day"||S.chartMode==="draw") return drawKChart(s);
   const cv=$("#cv"); if(!cv) return;
   const dpr=window.devicePixelRatio||1, w=cv.clientWidth||360, h=150;
   if(cv.width!==Math.round(w*dpr)){cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);}
@@ -2680,6 +2878,8 @@ function drawChart(s){
   g.lineTo(X(pts.length-1),h-14); g.lineTo(0,h-14); g.closePath();
   const gr=g.createLinearGradient(0,0,0,h); gr.addColorStop(0,up?"rgba(239,74,82,.28)":"rgba(39,179,107,.28)"); gr.addColorStop(1,"rgba(0,0,0,0)"); g.fillStyle=gr; g.fill();
   const lx=X(pts.length-1), ly=Y(pts[pts.length-1]); g.beginPath(); g.arc(lx,ly,3,0,Math.PI*2); g.fillStyle=col; g.fill();
+  todayLines(s.code).filter(l=>l.st==="wait"&&l.px>=lo&&l.px<=hi).forEach(l=>{ const y=Y(l.px), lc=l.kind==="buy"?"#f2b544":"#8fc3e8"; g.strokeStyle=lc; g.globalAlpha=.85; g.setLineDash([6,4]); g.beginPath(); g.moveTo(0,y); g.lineTo(w-44,y); g.stroke(); g.setLineDash([]); g.globalAlpha=1;
+    g.fillStyle=lc; g.font="10px Noto Sans SC, sans-serif"; g.textAlign="left"; g.fillText(`${LINE_T[l.type].n} ${l.px.toFixed(2)}`,4,y-3); });
   if(S.hoverX!=null && S.hoverX>=0 && S.hoverX<=w-44 && pts.length>1){   // 悬停：这一分钟的价格
     const i=Math.max(0,Math.min(pts.length-1,Math.round(S.hoverX/(w-44)*MINUTES))), p=pts[i], x=X(i), y=Y(p);
     g.strokeStyle="rgba(236,232,242,.35)"; g.setLineDash([3,3]); g.beginPath(); g.moveTo(x,4); g.lineTo(x,h-14); g.moveTo(0,y); g.lineTo(w-44,y); g.stroke(); g.setLineDash([]);
@@ -3484,7 +3684,7 @@ function closeSheet(){document.querySelectorAll(".sheet").forEach(s=>s.remove())
 const DAY_FILL=["食堂的晚饭是土豆烧肉。","今天的天很蓝，你几乎没抬头看。","快递柜里有你的快递，放了三天了。","教学楼的电梯又坏了。","今天没下雨，你却带了伞。","下午有人在楼下放风筝。","你的水杯落在了教室，明天再去拿。","今天和昨天差不多。"];
 function closeMarket(){
   closeSheet(); sfx("dayend");
-  S.phase="after"; S.fast=false;
+  S.phase="after"; S.fast=false; expireLines();
   const d=S.day;
   if(S.cash<0) S.cash*=1.0005;
   const eq=equity(), pl=eq-S.openEquity, r=Math.abs(pl)/DAILY_INCOME;
@@ -4363,6 +4563,8 @@ function showReport(){
       ${S.postLog.length?`<li>你在圈子里发了 ${S.postLog.length} 条动态：${[["gain","晒收益"],["loss","吐槽亏钱"],["focus","专注打卡"],["intern","实习打卡"],["ask","提问"]].map(([k,n])=>{const c=S.postLog.filter(x=>x.kind===k).length; return c?`${n} ${c} 条`:"";}).filter(Boolean).join("，")}。粉丝 ${S.followers}，其中炒股的 ${S.fans.stock}，学习的 ${S.fans.study}。</li>`:""}
       ${(S.breakdowns||[]).map(b=>`<li>第 ${b.day} 天，你在${b.loc==="library"?"图书馆":"教室"}里崩溃了。那天你亏了 ${fmt(-b.pl)}。</li>`).join("")}
       ${S.clears.length?`<li>你一共清仓 ${S.clears.length} 次。其中 ${S.clears.filter(c=>stock(c.code).price>c.avgSell*1.03).length} 次卖出后它又涨了，${S.clears.filter(c=>stock(c.code).price<c.avgSell*0.97).length} 次卖出后它继续跌。</li>`:""}
+      ${(()=>{ const ls=S.lineStat||{}, L=(S.lines||[]).filter(l=>l.st!=="cancel"); if(!L.length) return ""; const ex=L.filter(l=>l.st==="exp").length;
+        return `<li>你在日K上画了 ${L.length} 条线，碰线成交 ${ls.filled||0} 条${ex?`，${ex} 条到收盘都没碰到${ls.near?`（其中 ${ls.near} 条只差不到 1%）`:""}`:""}。${ls.limit?`有 ${ls.limit} 条碰线时正赶上涨停或跌停封板，只能去排队。`:""}${ls.t1?`有 ${ls.t1} 条卖出线碰到了，却因为 T+1 卖不出去。`:""}</li>`; })()}
       ${(S.streakMax||0)>=4?`<li>你最长连续专注了 ${S.streakMax} 天。${S.skipped20?"后来的日子，你没有再打开过行情。":""}</li>`:""}
       <li>${(S.habit||0)>=0.6?"二十天下来，坐下来学习成了你的习惯。":(S.habit||0)>=0.3?"你开始有了一点学习的习惯，但还不稳。":"你一直没能养成坐下来的习惯。每次坐下，都要重新开始。"}</li>
       <li>你在专注时切出去看手机 ${S.switches||0} 次。每次回来，大约要 10 分钟才能重新进入状态，因此少学了 ${hrs(S.refocusLost||0)} 小时。</li>
@@ -4394,13 +4596,13 @@ function showReport(){
   S.repHtml=repHtml;
   const again=()=>{ closeOverlay(); newGame(); renderIntro(); drawYou(); };
   const showRep=()=>openOverlay(S.repHtml,"rep",c=>{ if(c==="again") again(); });
-  showRep();
   setView(`<div class="pad" style="display:grid;gap:14px;padding-top:48px">
     <div class="eyebrow">二十天过去了</div><h1 style="font-family:var(--f-display);font-weight:400;font-size:34px;margin:0">复盘报告</h1>
     <p class="small">报告已经铺在整个屏幕上。</p>
     <button class="btn primary" id="repOpen" type="button">再看一遍报告</button><button class="btn" id="repAgain" type="button">再来一次</button></div>`,"intro");
   $("#repOpen").onclick=showRep; $("#repAgain").onclick=again;
   $("#sb-time").textContent="—";
+  endLid("复盘报告",showRep,again);
 }
 
 /* ============ 周期真相图 ============ */
@@ -5629,12 +5831,12 @@ function showFocusEnd(){
   S.repHtml=html;
   const again=()=>{ closeOverlay(); newGame(); renderIntro(); drawYou(); };
   const showRep=()=>openOverlay(S.repHtml,"rep",c=>{ if(c==="again") again(); });
-  showRep();
   setView(`<div class="pad" style="display:grid;gap:14px;padding-top:48px">
     <div class="eyebrow">二十天过去了</div><h1 style="font-family:var(--f-display);font-weight:400;font-size:34px;margin:0">另一种结局</h1>
     <p class="small">你没有下载那个软件。结局已经铺在整个屏幕上。</p>
     <button class="btn primary" id="repOpen" type="button">再看一遍</button><button class="btn" id="repAgain" type="button">再来一次</button></div>`,"intro");
   $("#repOpen").onclick=showRep; $("#repAgain").onclick=again;
+  endLid(S.boughtPhone?"妈妈结局":"另一种结局",showRep,again);
 }
 
 /* ============ 声音：全部用 Web Audio 现场合成 ============ */
@@ -5676,6 +5878,7 @@ function sfx(n){
     case "heart": tone(D,t,62,"sine",0.32,0.006,0.16,44); tone(D,t+0.24,58,"sine",0.22,0.006,0.16,40); break;
     case "sting": tone(D,t,mtof(45),"sawtooth",0.05,0.02,0.9,mtof(44)); noiseHit(D,t,0.04,0.6,"lowpass",500); break;
     case "chime": tone(D,t,mtof(81),"sine",0.07,0.004,0.9); tone(D,t+0.16,mtof(76),"sine",0.06,0.004,1.1); break;
+    case "lid": noiseHit(D,t,0.06,0.09,"lowpass",600); tone(D,t,110,"sine",0.14,0.003,0.16,70); break;
   }
 }
 function heartbeat(sec){ clearInterval(AU.heart); let n=0; sfx("heart"); AU.heart=setInterval(()=>{ if(++n>sec*1.2){ clearInterval(AU.heart); return; } sfx("heart"); },820); }

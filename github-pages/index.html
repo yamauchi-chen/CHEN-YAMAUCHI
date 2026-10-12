@@ -1,0 +1,303 @@
+<title>大三下的好时候作品集</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;700&family=ZCOOL+QingKe+HuangYou&display=swap" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;700&family=ZCOOL+QingKe+HuangYou&display=swap"></noscript>
+<style>
+/* 版式：像游戏结尾的「复盘报告」——一张深夜书桌上的对账单。顶部一条行情带，正文是一页页报告。 */
+:root{
+  --bg:#f4f1f8; --sheet:#ffffff; --sheet-2:#f8f6fb; --ink:#211c2b; --muted:#6c657a; --line:#dcd5e6;
+  --gold:#a8700f; --gold-ink:#1b1820; --up:#d23a43; --down:#1d8a53; --tape:#2a2435; --tape-ink:#ece6f4;
+  --shadow:0 18px 50px rgba(40,28,70,.12);
+  --f-display:"ZCOOL QingKe HuangYou","Noto Sans SC",system-ui,sans-serif;
+  --f-body:"Noto Sans SC","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#14111b; --sheet:#1d1827; --sheet-2:#231d2f; --ink:#ece6f4; --muted:#a49db4; --line:#352d45;
+  --gold:#f2b544; --gold-ink:#1b1820; --up:#ff5a62; --down:#3fd08a; --tape:#0d0b12; --tape-ink:#ece6f4;
+  --shadow:0 22px 60px rgba(0,0,0,.45); color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#14111b; --sheet:#1d1827; --sheet-2:#231d2f; --ink:#ece6f4; --muted:#a49db4; --line:#352d45;
+  --gold:#f2b544; --gold-ink:#1b1820; --up:#ff5a62; --down:#3fd08a; --tape:#0d0b12; --tape-ink:#ece6f4;
+  --shadow:0 22px 60px rgba(0,0,0,.45); color-scheme:dark }
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.75}
+.wrap{max-width:1120px;margin:0 auto;padding-inline:20px}
+h1,h2,h3{text-wrap:balance;margin:0}
+h2{font-family:var(--f-display);font-weight:400;font-size:clamp(26px,3.4vw,34px);letter-spacing:.02em}
+h3{font-size:16px;font-weight:700}
+p{margin:0}
+a{color:inherit}
+.num,.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.12em;color:var(--muted)}
+:focus-visible{outline:2px solid var(--gold);outline-offset:3px;border-radius:6px}
+
+/* 行情带 */
+.tape{background:var(--tape);color:var(--tape-ink);font-family:var(--f-mono);font-size:12.5px;overflow:hidden;border-bottom:1px solid rgba(255,255,255,.06)}
+.tape .row{display:flex;gap:28px;white-space:nowrap;padding-block:9px;width:max-content;animation:tape 48s linear infinite}
+.tape span b{font-weight:600;margin-left:6px}
+.tape .up{color:#ff6b72}.tape .dn{color:#3fd08a}.tape .g{color:#f2b544}
+@keyframes tape{to{transform:translateX(-50%)}}
+@media (prefers-reduced-motion:reduce){.tape .row{animation:none}}
+
+/* 首屏 */
+.hero{padding-block:44px 30px;display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:36px;align-items:center}
+.hero h1{font-family:var(--f-display);font-weight:400;font-size:clamp(44px,7vw,78px);line-height:1.02;letter-spacing:.02em;margin-top:10px}
+.hero .lede{margin-top:16px;font-size:16.5px;color:var(--ink);max-width:34em}
+.hero .who{margin-top:14px;font-size:13px;color:var(--muted)}
+.cta{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:11px 18px;border-radius:10px;font-weight:700;font-size:14.5px;text-decoration:none;border:1px solid var(--line);background:var(--sheet);color:var(--ink);cursor:pointer;font-family:inherit}
+.btn.go{background:var(--gold);border-color:var(--gold);color:var(--gold-ink)}
+.btn small{font-weight:500;opacity:.75;font-family:var(--f-mono);font-size:12px}
+.shot{border-radius:12px;overflow:hidden;border:1px solid var(--line);box-shadow:var(--shadow);background:#000}
+.shot img{display:block;width:100%;height:auto}
+.hero .shot{transform:rotate(.6deg)}
+@media (max-width:860px){.hero{grid-template-columns:1fr}.hero .shot{transform:none}}
+
+/* 报告页 */
+.sheet{background:var(--sheet);border:1px solid var(--line);border-radius:16px;padding:clamp(20px,3.4vw,36px);box-shadow:var(--shadow)}
+section{padding-block:22px}
+.sec-h{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 20px;margin-bottom:18px}
+.sec-h p{color:var(--muted);font-size:14px;max-width:40em}
+
+/* 简历描述 */
+.resume{display:grid;gap:14px;font-size:14.5px}
+.resume h3{font-size:17px}
+.resume .k{font-weight:700}
+.resume ul{margin:0;padding-left:1.2em;display:grid;gap:6px}
+.resume li::marker{color:var(--gold)}
+.copybar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:6px}
+.copybar .ok{font-size:13px;color:var(--down)}
+
+/* 流程 */
+.steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.step{border-top:3px solid var(--gold);background:var(--sheet-2);border-radius:0 0 12px 12px;padding:14px 14px 16px;display:grid;gap:6px;align-content:start}
+.step .n{font-family:var(--f-mono);font-size:12px;color:var(--gold);letter-spacing:.1em}
+.step p{font-size:13.5px;color:var(--muted)}
+.step .fig{font-family:var(--f-mono);font-size:13px;color:var(--ink)}
+@media (max-width:860px){.steps{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:480px){.steps{grid-template-columns:1fr}}
+.formula{margin-top:14px;font-family:var(--f-mono);font-size:12.5px;color:var(--muted);background:var(--sheet-2);border-radius:10px;padding:10px 14px;overflow-x:auto;white-space:nowrap}
+
+/* 灵感 → 系统 */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:13.5px}
+th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:500;color:var(--muted);font-size:12.5px;background:var(--sheet-2)}
+tr:last-child td{border-bottom:0}
+td.id{font-family:var(--f-mono);color:var(--muted);white-space:nowrap}
+td.sc{font-family:var(--f-mono);white-space:nowrap}
+.tier{display:inline-block;font-family:var(--f-mono);font-size:11px;font-weight:600;padding:0 6px;border-radius:5px;margin-left:6px;border:1px solid currentColor}
+.tier.s{color:var(--up)}.tier.a{color:var(--gold)}.tier.b{color:var(--muted)}
+
+/* 截图 */
+.gal{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.gal figure{margin:0;display:grid;gap:8px}
+.gal button{padding:0;border:0;background:none;cursor:zoom-in;display:block;width:100%}
+.gal figcaption{font-size:13.5px;color:var(--muted)}
+.gal figcaption b{color:var(--ink);font-weight:700;margin-right:6px}
+@media (max-width:700px){.gal{grid-template-columns:1fr}}
+.lb{position:fixed;inset:0;background:rgba(8,6,12,.9);display:grid;place-items:center;padding:20px;z-index:20;cursor:zoom-out}
+.lb img{max-width:min(1400px,100%);max-height:88vh;border-radius:10px}
+
+/* AI 协作 */
+.ai{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 28px}
+.ai article{padding-block:14px;border-top:1px solid var(--line);display:grid;gap:6px;min-width:0}
+.ai article p{font-size:14px;color:var(--muted)}
+.ai article p em{font-style:normal;color:var(--ink)}
+@media (max-width:760px){.ai{grid-template-columns:1fr}}
+
+/* 数字 */
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.stat{background:var(--sheet);padding:16px;display:grid;gap:2px}
+.stat .v{font-family:var(--f-mono);font-size:28px;font-weight:600;letter-spacing:-.01em}
+.stat .v.up{color:var(--up)}
+.stat .k{font-size:13px;color:var(--muted)}
+@media (max-width:760px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* 角色 */
+.cast{display:grid;gap:12px}
+.cast p{font-size:14px;color:var(--muted);max-width:52em}
+
+/* 试玩 */
+.play{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:20px;align-items:center}
+.play ol{margin:8px 0 0;padding-left:1.3em;display:grid;gap:4px;font-size:14px}
+.play .note{font-size:13px;color:var(--muted);margin-top:10px}
+@media (max-width:700px){.play{grid-template-columns:1fr}}
+footer{padding-block:30px 46px;color:var(--muted);font-size:12.5px}
+</style>
+
+<div class="tape" aria-label="项目数据">
+  <div class="row">
+    <span>灵感库<b class="num">44</b></span><span>保留核心<b class="num up">▲26</b></span><span>候选<b class="num">17</b></span><span>搁置<b class="num dn">▼1</b></span>
+    <span>评分维度<b class="num">7</b></span><span>机制标签<b class="num">13</b></span><span>人工化学判定<b class="num">52</b></span>
+    <span>AI 美术<b class="num g">233 张</b></span><span>多轮对话<b class="num">53 段</b></span><span>结局<b class="num">6 种</b></span><span>迭代<b class="num up">V22</b></span>
+    <span class="dup" aria-hidden="true" style="display:contents"><span>灵感库<b class="num">44</b></span><span>保留核心<b class="num up">▲26</b></span><span>候选<b class="num">17</b></span><span>搁置<b class="num dn">▼1</b></span>
+    <span>评分维度<b class="num">7</b></span><span>机制标签<b class="num">13</b></span><span>人工化学判定<b class="num">52</b></span>
+    <span>AI 美术<b class="num g">233 张</b></span><span>多轮对话<b class="num">53 段</b></span><span>结局<b class="num">6 种</b></span><span>迭代<b class="num up">V22</b></span></span>
+  </div>
+</div>
+
+<main class="wrap">
+  <header class="hero">
+    <div>
+      <div class="eyebrow">独立游戏 · 反赌博主题的炒股人生模拟 · 网页可玩 Demo</div>
+      <h1>大三下的好时候</h1>
+      <p class="lede">大三下学期，考研、实习，还有室友推荐的炒股软件。二十个交易日里，玩家用同一份注意力在三条路之间做选择。行情会涨回来，时间和身边的人不会。</p>
+      <div class="cta">
+        <a class="btn go" href="play.html">开始试玩 <small>15 分钟起</small></a>
+        <a class="btn" href="#resume">项目描述</a>
+        <a class="btn" href="#ai">我怎么用 AI 做它</a>
+      </div>
+      <p class="who">策划与制作：本人　·　程序、文案与美术提示词：Claude　·　美术：AI 图像模型　·　2026 年 10 月</p>
+    </div>
+    <div class="shot"><img src="shots/market.jpg" alt="游戏画面：桌面上开着炒股软件，左边是窗外和主角，右上角是手表心率，右边是手机" width="1440" height="900"></div>
+  </header>
+
+  <section id="resume">
+    <div class="sheet">
+      <div class="sec-h"><h2>项目描述</h2><p>简历可以直接用这一段。</p></div>
+      <div class="resume" id="resumeText">
+        <h3>《大三下的好时候》：用 AI 搭建灵感评估流程，并做出可玩 Demo（个人项目 · 2026.10）</h3>
+        <p><span class="k">项目背景：</span>独立游戏创作常卡在三处：灵感零散、设定前后冲突、做出来不确定有没有人想玩。本项目面向个人独立开发和小团队，以「反赌博主题的炒股人生模拟」为题材，用 AI 搭建从灵感沉淀、评估到可玩原型的完整流程。</p>
+        <div><p class="k">具体工作：</p>
+          <ul>
+            <li><b>灵感结构化：</b>建立灵感库，44 条灵感统一记录机制标签、七维评分、参考先例、风险与复杂度，不同创意可以横向比较。</li>
+            <li><b>化学反应检测：</b>13 个机制标签组成化学矩阵，再加 52 条人工判定，检验新灵感与已有核心是互相强化，还是在争夺玩家同一份注意力。</li>
+            <li><b>市场适配打分：</b>七个加权维度（核心循环张力、主题服务、易懂性、重玩与涌现、新颖度、情绪与传播、开发可行性），叠加先例口碑修正（按先例验证过的时长打折、按机制泛滥程度扣分）和风险扣分。</li>
+            <li><b>加权保留：</b>分数只决定权重，不删除灵感；按边际价值排序，用复杂度预算防止范围失控。最终保留核心 26 条、候选 17 条、搁置 1 条。</li>
+            <li><b>原型落地：</b>把核心灵感做成网页可玩 Demo。20 个交易日里，考研、实习、炒股三条线争夺同一份注意力；行情有题材轮动、集合竞价、涨跌停、T+1、融资与配资；生活侧有多轮对话、晚间安排、消费和借贷；共 6 种结局，带跨周目记忆。</li>
+          </ul></div>
+        <div><p class="k">产出：</p>
+          <ul>
+            <li>可玩 Demo：单文件网页，约 5,800 行，迭代 22 个版本；每版发布前用自动化脚本跑完整局回归测试。</li>
+            <li>AI 美术 233 张，角色形象一致；自动抠图和换色遮罩，让一套姿势支持多种发色和服装。</li>
+            <li>6 份文档（灵感总表、评分模型说明、评估报告、行情规则、美术需求、美术提示词手册），以及评分模型脚本（Python）。</li>
+          </ul></div>
+        <div><p class="k">我如何用 AI：</p>
+          <ul>
+            <li>先建模型再动手：用量化模型决定做什么、不做什么，后加的功能（消费、借贷）也先过主题检验。</li>
+            <li>把 AI 当团队分工：Claude 写程序、文案和美术提示词，图像模型出图，我负责方向、取舍、试玩和验收；美术提示词先行，生图与开发并行。</li>
+            <li>用测试守住速度：两天内 20 多次迭代，每次发布前自动跑通整局。</li>
+          </ul></div>
+      </div>
+      <div class="copybar"><button class="btn" id="copyBtn" type="button">复制这段描述</button><span class="ok" id="copyOk" hidden>已复制</span></div>
+    </div>
+  </section>
+
+  <section id="flow">
+    <div class="sec-h"><h2>从灵感库到可玩 Demo</h2><p>每一条灵感都先过这四步，再决定做不做、做成什么样。</p></div>
+    <div class="steps">
+      <div class="step"><span class="n">STEP 1</span><h3>灵感结构化</h3><p>零散的想法统一成同一种格式：机制标签、七维评分、参考先例、风险、复杂度。</p><span class="fig">44 条灵感</span></div>
+      <div class="step"><span class="n">STEP 2</span><h3>化学反应检测</h3><p>两两比对：互相强化加分；同一个标签抢玩家同一份注意力，扣分。人工判定优先于规则。</p><span class="fig">13 个标签 · 52 条判定</span></div>
+      <div class="step"><span class="n">STEP 3</span><h3>市场适配打分</h3><p>七个加权维度，主题服务权重最高；先例口碑按验证过的时长打折，机制越泛滥扣得越多。</p><span class="fig">S ≥ 80 · A ≥ 70 · B ≥ 60</span></div>
+      <div class="step"><span class="n">STEP 4</span><h3>加权保留</h3><p>分数变成权重，不删除；新灵感进来，仍能和旧灵感起反应。复杂度预算 12 点，防止范围失控。</p><span class="fig">保留 26 · 候选 17 · 搁置 1</span></div>
+    </div>
+    <div class="formula">边际价值 = 单体分 + 6 × Σ（与保留核心的化学值 × √权重积）　·　权重 = 单体分 ÷ 100　·　超出复杂度预算每 1 点扣 3 分</div>
+  </section>
+
+  <section id="ideas">
+    <div class="sheet">
+      <div class="sec-h"><h2>评分最高的灵感，在 Demo 里长什么样</h2><p>分数来自评估报告；右边一列是它在游戏里的实际做法。</p></div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>ID</th><th>灵感</th><th>单体分</th><th>Demo 里的样子</th></tr></thead>
+        <tbody>
+          <tr><td class="id">I34</td><td>落差倍数驱动身心刺激</td><td class="sc">87.5<span class="tier s">S</span></td><td>账户浮动换算成「奶茶店打工几小时、几天生活费」，同时推高手表上的心率和压力；看着亏比看着赚难受得多。</td></tr>
+          <tr><td class="id">I43</td><td>妈妈的手机 + 跨周目记忆</td><td class="sc">86.8<span class="tier s">S</span></td><td>一周目炒股亏过钱、又看过妈妈那条帖子，二周目开局可以用八千块里的七千给妈妈买手机，走向「妈妈结局」。</td></tr>
+          <tr><td class="id">I31</td><td>大三的三岔路</td><td class="sc">84.5<span class="tier s">S</span></td><td>考研、实习、炒股共用一天的时间；番茄钟、实习作品、行情抢的是同一份注意力。</td></tr>
+          <tr><td class="id">I19</td><td>加速看盘＝现实时间流失</td><td class="sc">83.5<span class="tier s">S</span></td><td>专注越久时间过得越快，走神、盯盘时间变慢；连续专注会翻倍提速。</td></tr>
+          <tr><td class="id">I32</td><td>快乐阈值漂移</td><td class="sc">83.0<span class="tier s">S</span></td><td>吃过好的，便宜的快乐不再管用；用账面盈利消费，价格开始被看成「今天赚的百分之几」。</td></tr>
+          <tr><td class="id">I17</td><td>终局复盘报告</td><td class="sc">81.7<span class="tier s">S</span></td><td>结局后列出番茄、心率峰值、时间账单、手续费、借贷利息，以及「如果这些钱用在别的地方」。</td></tr>
+          <tr><td class="id">I37</td><td>下载门槛 + 专注结局</td><td class="sc">79.5<span class="tier a">A</span></td><td>前三天不下载炒股软件，直接进入专注结局；后面十七天按专注的样子过完。</td></tr>
+          <tr><td class="id">I42</td><td>涨跌停排队</td><td class="sc">75.0<span class="tier a">A</span></td><td>涨停买不进、跌停卖不出、一字跌停连板；配资账户跌几个点就被强平。</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <section id="shots">
+    <div class="sec-h"><h2>游戏画面</h2><p>点击图片放大。</p></div>
+    <div class="gal">
+      <figure><button type="button" data-big="shots/vn.jpg"><div class="shot"><img src="shots/vn.jpg" alt="开学前一晚，宿舍里两位室友" loading="lazy" width="1440" height="900"></div></button><figcaption><b>开学前一晚</b>宿舍视觉小说开场。两位室友代表两条路：考研的老三，实习兼炒股的小周。</figcaption></figure>
+      <figure><button type="button" data-big="shots/lock.jpg"><div class="shot"><img src="shots/lock.jpg" alt="早上 8:12 的手机锁屏，堆满消息和推送" loading="lazy" width="1440" height="900"></div></button><figcaption><b>早上 8:12</b>醒来第一件事是看手机。前一天行情越热，第二天的推送越大。</figcaption></figure>
+      <figure><button type="button" data-big="shots/focus.jpg"><div class="shot"><img src="shots/focus.jpg" alt="专注模式，番茄钟计时，主角在图书馆用电脑" loading="lazy" width="1440" height="900"></div></button><figcaption><b>专注</b>番茄钟扣在桌上计时，拿起手机这个番茄就作废；连续专注会进入心流，时间过得更快。</figcaption></figure>
+      <figure><button type="button" data-big="shots/chat.jpg"><div class="shot"><img src="shots/chat.jpg" alt="手机上和妈妈的聊天，妈妈发来家门口的月季" loading="lazy" width="1440" height="900"></div></button><figcaption><b>消息</b>妈妈、室友会来找你，多轮对话；回不回、怎么回，会一点点改变关系。</figcaption></figure>
+      <figure><button type="button" data-big="shots/shop.jpg"><div class="shot"><img src="shots/shop.jpg" alt="晚上的选项面板和手机上的附近好店" loading="lazy" width="1440" height="900"></div></button><figcaption><b>晚上</b>时间放慢，看什么决定今晚的心情。「附近好店」能剪发、染发、买衣服，形象会一直留在之后的立绘上。</figcaption></figure>
+      <figure><button type="button" data-big="shots/loan.jpg"><div class="shot"><img src="shots/loan.jpg" alt="手机上的借贷 App，可借额度两万" loading="lazy" width="1440" height="900"></div></button><figcaption><b>借钱炒股</b>室友推荐的网贷和配资 App。到手少一截，逾期会催收到妈妈那里；只有高倍杠杆加借款，压力才会压垮人。</figcaption></figure>
+      <figure><button type="button" data-big="shots/summary.jpg"><div class="shot"><img src="shots/summary.jpg" alt="一天结束的总结卡片，配当天的照片" loading="lazy" width="1440" height="900"></div></button><figcaption><b>一天的总结</b>拍不拍照片由玩家决定，照片会进相册，最后在复盘里对比开学前后的自己。</figcaption></figure>
+      <figure><button type="button" data-big="shots/whatif.jpg"><div class="shot"><img src="shots/whatif.jpg" alt="如果这些钱用在别的地方：回家的高铁票、和老三吃烧烤" loading="lazy" width="1440" height="900"></div></button><figcaption><b>如果这些钱用在别的地方</b>第一次亏钱收场时出现：回家的高铁票、和室友的烧烤、妈妈想换的手机。</figcaption></figure>
+    </div>
+  </section>
+
+  <section id="cast">
+    <div class="sheet cast">
+      <div class="sec-h"><h2>同一个人，233 张图</h2><p>男女主角、舍友、场景、窗外，全部由 AI 图像模型按同一套提示词生成。</p></div>
+      <div class="shot"><img src="shots/cast.jpg" alt="主角立绘：原来的样子、剪了新发型、换了开衫衬衫；下排是赚钱、亏钱、心流、疲惫、麻木、担心的表情" loading="lazy" width="1800" height="800"></div>
+      <p>上排：原来的样子、剪了新发型、换了一身开衫衬衫（男、女各一组）。下排：赚钱时手机的红光、亏钱时的绿光、心流、熬夜、麻木、担心。所有立绘先做角色设定图锁定长相，再统一绿幕出图；打包脚本自动抠图，并生成头发和衣服的遮罩。染发、换卫衣颜色不需要重新画图，一套姿势可以换 8 种发色、8 种衣服颜色。</p>
+    </div>
+  </section>
+
+  <section id="ai">
+    <div class="sec-h"><h2>我怎么用 AI 做这个游戏</h2><p>我负责方向、取舍、试玩和验收；AI 负责把每一个决定变成能玩的东西。</p></div>
+    <div class="ai">
+      <article><h3>先建模型，再写代码</h3><p>灵感先进库、打分、算化学反应，再决定做什么。后来加的「附近好店」「借贷与配资」，也先问同一个问题：<em>它服务「反赌博」这个主题吗？</em>刺激可以加，代价必须跟着来。</p></article>
+      <article><h3>把主题写进数值</h3><p>每一种刺激都有对应的代价：浮动金额按生活费换算；看着亏比看着赚难受；压力分四段，影响学习和睡眠；<em>只有五倍以上配资再背着借款，压力才会爆。</em></p></article>
+      <article><h3>像带团队一样分工</h3><p>Claude 写程序、文案和美术提示词，图像模型出图，我做判断。<em>每次先拿到美术提示词，生图和写代码同时进行</em>，最后一批 99 张新图一次性接进游戏。</p></article>
+      <article><h3>用自动化测试守住速度</h3><p>每一版发布前，用浏览器自动化把整局跑一遍：专注线、随机炒股线、十倍杠杆借贷线，确认没有报错、结局都能走到。<em>两天内迭代 22 个版本</em>，每一版都确认能从开局玩到结局。</p></article>
+      <article><h3>试玩反馈直接落到机制</h3><p>「竞价时今日盈亏以开盘价为 0 轴」「压力太容易降」「换了发型日常立绘不变」——每条反馈都定位到具体的规则或数据，改完再跑一遍整局。</p></article>
+      <article><h3>美术也有工程</h3><p>233 张图保持同一个人：角色设定图做参考，绿幕统一出图，脚本抠图、量化调色、生成换色遮罩，图片包按需加载。<em>人工只负责生成和挑图。</em></p></article>
+    </div>
+  </section>
+
+  <section id="numbers">
+    <div class="stats">
+      <div class="stat"><span class="v">5,800</span><span class="k">行，单文件网页，不依赖框架</span></div>
+      <div class="stat"><span class="v">368</span><span class="k">个函数</span></div>
+      <div class="stat"><span class="v up">233</span><span class="k">张 AI 美术</span></div>
+      <div class="stat"><span class="v">53</span><span class="k">段多轮对话</span></div>
+      <div class="stat"><span class="v">20</span><span class="k">个交易日</span></div>
+      <div class="stat"><span class="v">6</span><span class="k">种结局，带跨周目记忆</span></div>
+      <div class="stat"><span class="v up">22</span><span class="k">个发布版本</span></div>
+      <div class="stat"><span class="v">44</span><span class="k">条灵感，保留 26</span></div>
+    </div>
+  </section>
+
+  <section id="play">
+    <div class="sheet play">
+      <div>
+        <h2>试玩</h2>
+        <ol>
+          <li>开学前一晚，宿舍里的对话决定你倾向哪条路。</li>
+          <li>前三天不下载炒股软件，会直接进入专注结局，约 15 分钟。</li>
+          <li>下载「涨涨证券」，就要在盯盘、复习、回消息之间分配每一分钟。完整 20 天约一小时。</li>
+          <li>一局亏过钱、又看过妈妈的帖子，下一局开局可以给妈妈买手机。</li>
+        </ol>
+        <p class="note">建议用电脑浏览器、窗口宽度 1280 以上打开。第一次打开要下载约 11 MB 的图片，页面上会显示进度，网速慢时要等半分钟左右。右上角可以调音量、静音和文字速度。</p>
+      </div>
+      <a class="btn go" href="play.html">开始试玩 <small>15 分钟起</small></a>
+    </div>
+  </section>
+</main>
+
+<footer class="wrap">《大三下的好时候》为个人独立游戏 Demo。游戏中的公司、App、人物均为虚构，不构成任何投资建议。</footer>
+
+<div class="lb" id="lb" hidden><img id="lbImg" alt=""></div>
+
+<script>
+(function(){
+  var lb=document.getElementById('lb'), im=document.getElementById('lbImg');
+  document.querySelectorAll('[data-big]').forEach(function(b){ b.addEventListener('click',function(){ im.src=b.getAttribute('data-big'); im.alt=(b.querySelector('img')||{}).alt||''; lb.hidden=false; }); });
+  lb.addEventListener('click',function(){ lb.hidden=true; });
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape') lb.hidden=true; });
+  var btn=document.getElementById('copyBtn'), ok=document.getElementById('copyOk'), src=document.getElementById('resumeText');
+  function plain(){ var out=[]; src.querySelectorAll('h3,p,li').forEach(function(n){ var t=n.innerText.trim(); if(!t) return; out.push(n.tagName==='LI'?'· '+t:t); }); return out.join('\n'); }
+  btn.addEventListener('click',function(){
+    var text=plain();
+    var done=function(){ ok.hidden=false; setTimeout(function(){ ok.hidden=true; },2200); };
+    try{ navigator.clipboard.writeText(text).then(done,function(){ sel(); }); }catch(e){ sel(); }
+    function sel(){ var r=document.createRange(); r.selectNodeContents(src); var s=window.getSelection(); s.removeAllRanges(); s.addRange(r); ok.textContent='已选中，按 Ctrl+C 复制'; ok.hidden=false; }
+  });
+})();
+</script>

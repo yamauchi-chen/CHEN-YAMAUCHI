@@ -1602,7 +1602,7 @@ function genHistory(){
 function startDay(){
   const d=S.day;
   S.refocusLeft=0; S.sitMin=0; S.awayFromStudy=false; S.studyBreak=false; S.brokeToday=false; S.cryUntil=-1; S.noStudyToday=false; S.paused=false; S.frozen=false; S.focusSess=0; S.tomToday=0; S.tomLog=[]; S.flow=0; S.qSum=0; S.qN=0; S.lastQ=null; S.postsToday=0; S.itStart={proj:S.it.proj,emails:S.it.emails};
-  S.dayPeak=0; S.flipped=false; S.dayLev=curLev(); S.lossCapped=false; S.minute=0; S.hrMax=0; S.hrMaxAt=""; S.hrMaxApp=""; S.fast=false; S.todayStudy=0; S.todayEff=0; S.todayViolated=false; S.dayHaltBreached=false; S.hasClass=S.classDays.has(d); S.loc=S.hasClass?"class":"library"; S.stockStreak=0;
+  S.dayPeak=0; S.dayPeakW=null; S.flipped=false; S.dayLev=curLev(); S.lossCapped=false; S.minute=0; S.hrMax=0; S.hrMaxAt=""; S.hrMaxApp=""; S.fast=false; S.todayStudy=0; S.todayEff=0; S.todayViolated=false; S.dayHaltBreached=false; S.hasClass=S.classDays.has(d); S.loc=S.hasClass?"class":"library"; S.stockStreak=0;
   if(S.rate.on && S.rate.plan==="month" && d>S.rate.since && (d-S.rate.since)%20===0){ S.cash-=500; S.rate.paid+=500; }   // 月费续费
   // 大盘
   const st=S.world.reg[d]||"平淡", R=REGIMES[st], idxRet=R.drift+R.vol*gauss(), volState=S.world.vols[d]||"平量";
@@ -1652,7 +1652,8 @@ function startDay(){
   });
   S.index.val=S.index.path[0];
   S.openEquity=equity();   // 今日盈亏的 0 轴＝昨天收盘时的总资产（竞价、高开低开都算进今天）
-  S.creditLine = levNow()>1? Math.max(0,S.openEquity)*(levNow()-1) : 0;   // 融资 / 配资额度每天开盘时按总资产核定一次
+  S.creditLine = levNow()>1&&!S.liqPending? Math.max(0,S.openEquity)*(levNow()-1) : 0;   // 融资 / 配资额度每天开盘时按总资产核定一次；强平没卖完就不再给额度
+  S._eqS=S._eqL=equity();   // 开盘前按昨天收盘价算：低开就是「往下走」，高开就是「往上走」
   Object.values(S.hold).forEach(h=>h.todayQty=0);            // T+1：昨天买的今天可以卖了
   S.alertBase={}; S.stocks.forEach(s=>S.alertBase[s.code]=s.price);
   S.orders=[]; S.aucMin=0; S.aucPx="mkt";
@@ -2035,11 +2036,45 @@ function lossLv(){ return Math.max(S.dayLev||1,curLev()); }
 function lossK(){ return Math.min(1,(lossLv()-1)/4); }                       // 1 倍 → 0，5 倍及以上 → 1
 function lossF(){ return 0.35+0.65*lossK()+0.06*Math.max(0,lossLv()-5); }  // 1 倍 0.35，2 倍约 0.5，5 倍 1，10 倍 1.3
 function lossCeil(){ return 55+(stressCap()-55)*lossK(); }                 // 不加杠杆：亏钱最多把你推到 55（紧绷）
-function lossStress(v){ if(!(v>0)) return 0; const f=lossF(), room=lossCeil()-S.stress;
+/* ============ 水上 / 水下 ============
+   水上＝账户总资产扣掉网贷欠款，回到本金以上。在水上，炒股不攒压力；一回到水上，这一轮炒股攒下的压力立刻清空。
+   S.stkSt：压力里「炒股攒下的」那一部分；S.proxSt：「离平仓线太近」那一部分（随时跟着距离变，远离了就消）。 */
+const netWorth=()=>equity()-loanOwed();
+const waterGap=()=>netWorth()-S.start;
+const isWater=()=>waterGap()>=0;
+const LIQ_LINE={2:0.3,5:0.13,10:0.07};
+const liqLine=()=>LIQ_LINE[levNow()]||0.3;
+function liqClose(){   // 0＝满仓刚建好时那么安全（或更安全），1＝压在平仓线上
+  if(levNow()<=1||posValue()<=0) return 0;
+  const m=equity()/posValue(), L=liqLine(), m0=1/levNow(); return Math.max(0,Math.min(1,(m0-m)/(m0-L))); }
+function liqRoom(){ const E=equity(), Pv=posValue(), L=liqLine(); return Pv>0? (E-L*Pv)/(1-L)/Pv : 1; }   // 持仓还能再跌百分之几才碰线
+function stkSync(){   // 别的事（睡觉、聊天、赚钱的日子）让压力降了：炒股那两部分按比例一起降
+  S.stkSt=S.stkSt||0; S.proxSt=S.proxSt||0;
+  const last=S._stLast; if(last!=null&&last>0&&S.stress<last){ const f=Math.max(0,S.stress/last); S.stkSt*=f; S.proxSt*=f; }
+  const tot=S.stkSt+S.proxSt; if(tot>S.stress){ const f=tot>0?Math.max(0,S.stress)/tot:0; S.stkSt*=f; S.proxSt*=f; }
+  S._stLast=S.stress; }
+function stkAdd(v){   // 借贷、杠杆带来的压力：在水上不加
+  if(!(v>0)||isWater()) return 0; stkSync();
+  const add=Math.max(0,Math.min(v,stressCap()-S.stress)); S.stress+=add; S.stkSt+=add; S._stLast=S.stress; return add; }
+function proxTick(){   // 离平仓线越近越难受：(20～50) × 距离²，远离了就慢慢消
+  stkSync();
+  const c=liqClose(), P=c>0?(20+30*lossK())*c*c:0, d=P-S.proxSt;
+  if(Math.abs(d)<0.01) return;
+  if(d>0){ const add=Math.max(0,Math.min(d,stressCap()-S.stress)); S.stress+=add; S.proxSt+=add; }
+  else { const rem=Math.min(-d,S.proxSt); S.stress=Math.max(0,S.stress-rem); S.proxSt-=rem; }
+  S._stLast=S.stress; }
+function waterCheck(where){   // 回到水上：这一轮炒股攒下的压力立刻清空
+  stkSync(); const w=isWater();
+  if(w&&S.stkSt>0.05){ const amt=S.stkSt; S.stress=Math.max(0,S.stress-amt); S.stkSt=0; S._stLast=S.stress;
+    if(amt>=2){ S.waterClears=(S.waterClears||0)+1; hrKick(-6);
+      const t=`回本了。这一轮炒股攒下的压力（${amt.toFixed(0)}）一下子全没了。`;
+      if(where==="close") S._waterLine=t; else if(S.app==="stock") toast(t); else showBanner("涨","涨涨证券","账户回到本金以上了。","stock"); } }
+  S.wasWater=w; }
+function lossStress(v){ if(!(v>0)||isWater()) return 0; stkSync(); const f=lossF(), room=lossCeil()-S.stress;
   if(room<=0){ S.lossCapped=true; return 0; }
   const soft=lossK()<1? Math.min(1,room/12+0.15) : 1;   // 有封顶时，越接近上限涨得越慢；5 倍以上不减速
   const add=Math.min(room, v*f*soft); if(add<v*f*0.99) S.lossCapped=true;
-  S.stress+=add; return add; }
+  S.stress+=add; S.stkSt+=add; S._stLast=S.stress; return add; }
 function planLine(){ const p=planNow(); return p.intern&&S.internState==="open"?`按计划，实习准备今天该到 ${Math.round(p.itExp*100)}%，你在 ${Math.round(p.itAct*100)}%`:`按计划，一轮今天该到 ${Math.round(p.kyExp*100)}%，你在 ${Math.round(p.kyAct*100)}%`; }
 function habitAdd(v,why){
   const o=S.habit||0, n=Math.max(0,Math.min(1,o+v)); S.habit=n;
@@ -2059,34 +2094,44 @@ function tickMinute(){
   S.appTime[a]++;
   if(!S.ffEndOn&&S.appTime.stock>=FF_END_MIN){ S.ffEndOn=true; setTimeout(()=>{ toast("累计看盘满 20 小时。看盘页面可以直接快进到收盘了。"); if(S.app==="stock"&&S.phase==="market") reStock(); },200); }
   if(S.fast){S.skipped++; }
-  { const dp=equity()-S.openEquity, r=Math.abs(dp)/DAILY_INCOME; S.dayPeak=Math.max(S.dayPeak||0,dp); S.dayLev=Math.max(S.dayLev||1,curLev());
-    if(!S.flipped && dp<0 && S.dayPeak>=DAILY_INCOME){   // 今天赚过至少一天生活费，现在翻成了亏
+  stkSync();
+  { const dp=equity()-S.openEquity, r=Math.abs(dp)/DAILY_INCOME, wg=waterGap(), eqN=equity(), rising=eqN>(S._eqS==null?eqN:S._eqS); S._eqS=eqN;
+    S.dayPeak=Math.max(S.dayPeak||0,dp); S.dayPeakW=Math.max(S.dayPeakW==null?-Infinity:S.dayPeakW,wg); S.dayLev=Math.max(S.dayLev||1,curLev());
+    if(!S.flipped && wg<0 && S.dayPeakW>=DAILY_INCOME){   // 今天账户赚过至少一天生活费，现在跌回本金以下
       S.flipped=true; lossStress(6*stressAmp()); hrKick(lossLv()>=1.5?18:8);
-      const msg=`刚才还赚着 ${fmt(S.dayPeak)}，现在倒亏 ${fmt(-dp)}。`;
-      if(a==="stock"){ toast(msg); sfx("down"); } else showBanner("涨","涨涨证券",`今日盈亏翻绿了：${msg}`,"stock"); }
+      const msg=`账户刚才还赚着 ${fmt(S.dayPeakW)}，现在跌回本金以下，亏 ${fmt(-wg)}。`;
+      if(a==="stock"){ toast(msg); sfx("down"); } else showBanner("涨","涨涨证券",`从赚到亏：${msg}`,"stock"); }
     if(a==="stock"){
       if(dp>=0) S.stress-=0.003*Math.log(1+r)*(S.fast?1.5:1);   // 看着赚钱：压力不涨，还会松一点
-      else { const fl=S.flipped? 2.5+2.5*Math.min(1,(S.dayPeak-dp)/DAILY_INCOME/3) : 1;   // 赚过又亏回去：比一直亏难受得多
-        lossStress(((S.fast?0.016:0.01)+0.006*Math.log(1+r)*(S.fast?1.5:1)*1.6)*fl); } } }   // 看着亏比看着赚难受得多
+      else if(!rising){ const fl=S.flipped? 2.5+2.5*Math.min(1,(S.dayPeakW-wg)/DAILY_INCOME/3) : 1;   // 赚过又亏回去：比一直亏难受得多
+        lossStress(((S.fast?0.016:0.01)+0.006*Math.log(1+r)*(S.fast?1.5:1)*1.6)*fl*(1+3*liqClose())); } } }   // 只在往下走时加；离平仓线越近加得越快
   if(a==="study") studyMinute();
   if(a==="stock"&&S.minute%30===0) habitAdd(-0.025);
   if(a==="stock" && S.loc==="class"){ if(++S.stockStreak>=120){ S.loc="dorm"; toast("你从教室溜回了宿舍"); } } else S.stockStreak=0;
   S.stress=Math.max(0,Math.min(stressCap(),S.stress));
   S.stocks.forEach(s=>s.price=s.path[S.minute]); S.index.val=S.index.path[S.minute];
   processQueue(); checkLines(false); glowKick=1;
-  // 杠杆强平
-  if(levNow()>1 && posValue()>0 && equity()<posValue()*({2:0.3,5:0.13,10:0.07}[levNow()]||0.3)){
-    // 强平也受 T+1 限制：只能卖掉今天之前买的；今天买的要等明天开盘
-    const canSell=Object.entries(S.hold).some(([c,h])=>h.qty-(h.todayQty||0)>0);
+  // 杠杆强平：只在账户往下走的那一分钟触发，不会涨着涨着被平仓。
+  // 今天买的（T+1）和封死在跌停上的卖不掉；卖不掉就只能等，等到能卖时可能已经亏穿本金（负资产）。
+  { const eqN=equity(), falling=eqN<(S._eqL==null?eqN:S._eqL); S._eqL=eqN;
+  if(levNow()>1 && posValue()>0 && falling && (S.liqPending || eqN<posValue()*liqLine())){
+    const sellQ=(c,h)=>isLimDn(stock(c))?0:Math.max(0,h.qty-(h.todayQty||0));
+    const canSell=Object.entries(S.hold).some(([c,h])=>sellQ(c,h)>0);
     if(canSell){
-    const wasPz=!!S.pz; let kept=0;
-    Object.keys(S.hold).forEach(c=>{const h=S.hold[c],s=stock(c),q=h.qty-(h.todayQty||0); if(q<=0){ kept+=h.qty; return; } const g=q*s.price,fe=fee(g);S.cash+=g-fe;S.fees+=fe;S.sells.push({day:S.day,pnl:(s.price-h.cost)*q-fe,viol:true});
+    const wasPz=!!S.pz, first=!S.liqSold; let kept=0; S.liqSold=true;
+    Object.keys(S.hold).forEach(c=>{const h=S.hold[c],s=stock(c),q=sellQ(c,h); if(q<=0){ kept+=h.qty; return; } const g=q*s.price,fe=fee(g);S.cash+=g-fe;S.fees+=fe;S.sells.push({day:S.day,pnl:(s.price-h.cost)*q-fe,viol:true});
       h.realized=(h.realized||0)+(s.price-h.cost)*q-fe; h.soldQty=(h.soldQty||0)+q; h.sellAmt=(h.sellAmt||0)+g; h.qty-=q; kept+=h.qty; if(!h.qty){ recordClear(s,h,"强制平仓"); delete S.hold[c]; } });
-    S.liquidated=wasPz?"pz":"margin"; S.stress=Math.min(stressCap(),S.stress+(wasPz?35:25));
-    if(wasPz){ S.pzBurned=S.day; S.pzBurns=(S.pzBurns||0)+1; S.pz=null; S.creditLine=S.leverage?Math.max(0,equity()):0; }
-    showBanner(wasPz?"倍":"涨",wasPz?"倍增宝":"涨涨证券",(wasPz?"账户跌破平仓线，已强制平仓。":"维持担保比例不足，已强制平仓。")+(kept?`今天买入的 ${kept} 股受 T+1 限制卖不了，明天开盘再处理。`:""),"stock");
-    }
+    const after=equity(); stkSync(); S.stkSt+=S.proxSt; S.proxSt=0;   // 怕的事真的发生了：这份压力不会因为仓位没了就消失
+    if(first){ S.liquidated=wasPz?"pz":"margin"; const add=Math.max(0,Math.min(wasPz?35:25,stressCap()-S.stress)); S.stress+=add; S.stkSt+=add; S._stLast=S.stress;
+      if(wasPz){ S.pzBurned=S.day; S.pzBurns=(S.pzBurns||0)+1; } }
+    if(after<0){ if(!S.liqNegDay||S.liqNegDay!==S.day){ S.chuancang=(S.chuancang||0)+1; } S.liqNegDay=S.day; S.liqNeg=after; S.negMax=Math.min(S.negMax||0,after); }
+    if(kept>0){ S.liqPending=true; S.creditLine=0; }
+    else { S.liqPending=false; S.liqSold=false; if(wasPz){ S.pz=null; S.creditLine=S.leverage?Math.max(0,equity()):0; } }
+    showBanner(wasPz?"倍":"涨",wasPz?"倍增宝":"涨涨证券",(first?(wasPz?"账户跌破平仓线，已强制平仓。":"维持担保比例不足，已强制平仓。"):"剩下的仓位也被强制卖掉了。")+(after<0?`卖完还倒欠 ${fmt(-after)}（穿仓）。`:"")+(kept?`还有 ${kept} 股是今天买的或封在跌停上，卖不掉，等能卖的时候再平。`:""),"stock");
+    } else if(S.liqStuckDay!==S.day){ S.liqStuckDay=S.day; S.liqPending=true; S.creditLine=0;
+      showBanner(S.pz?"倍":"涨",S.pz?"倍增宝":"涨涨证券","账户已经跌破平仓线，但仓位封在跌停上（或是今天刚买的），强平卖单卖不出去。","stock"); }
   }
+  proxTick(); waterCheck("tick"); }
   // 推送诱惑
   if(S.app!=="stock"){
     S.alertLv=S.alertLv||{};
@@ -2901,7 +2946,8 @@ function renderStockLive(full){
   $("#k-bp").textContent=fmt(buyingPower());
   $("#k-bpl").textContent = levNow()>1? `可买额度（含${S.pz?"配资":"融资"} ${fmt(S.creditLine)}）` : "可用资金";
   $("#k-fee").textContent=fmt(S.fees);
-  $("#k-wage").textContent=`今日浮动 ≈ 奶茶店打工 ${(Math.abs(pl)/HOUR_WAGE).toFixed(1)} 小时 · ${(Math.abs(pl)/DAILY_INCOME).toFixed(1)} 天生活费`;
+  { const wg=waterGap(), lv=levNow()>1&&posValue()>0;
+    $("#k-wage").textContent=`今日浮动 ≈ 奶茶店打工 ${(Math.abs(pl)/HOUR_WAGE).toFixed(1)} 小时 · ${(Math.abs(pl)/DAILY_INCOME).toFixed(1)} 天生活费${wg<0?` · 离回本还差 ${fmt(-wg)}`:""}${lv?` · 再跌 ${(Math.max(0,liqRoom())*100).toFixed(1)}% 碰平仓线`:""}`; }
   const ic=S.index.val/S.index.prev-1, ki=$("#k-idx"); ki.textContent=`${S.index.val.toFixed(2)}  ${pct(ic)}`; ki.className="num "+(ic>0?"up":ic<0?"down":"");
   S.watch.forEach(k=>{const e=$("#tc-"+k); if(!e) return; const c=themeChg(k); e.textContent="板块 "+pct(c); e.className="num "+(c>0?"up":c<0?"down":"");});
   S.stocks.forEach(s=>{
@@ -3848,20 +3894,20 @@ function closeMarket(){
   if(S.todayStudy<120) deviate("P4","上课时间只专注了 "+hrs(S.todayStudy)+" 小时");
   S.dayFocus[d]=S.todayStudy;
   // 刺激
-  const before=S.stress; let empty=false;
+  stkSync(); const before=S.stress; let empty=false;
   const watchMin=S.appTime.stock-(S._ps||0), watchF=0.3+1.7*Math.min(1,watchMin/MINUTES);   // 盯盘越久，盈亏带来的压力越大
   const gap=goalGap(); S.gap=gap;
   if(Math.abs(pl)>=DAILY_INCOME*10) S.numb=Math.min(1,(S.numb||0)+0.02);   // 一天的涨跌抵得上一个月生活费：几百块慢慢就不像钱了
-  const peak=S.dayPeak||0, flipF=pl<0&&peak>=DAILY_INCOME? 1+Math.min(1,peak/DAILY_INCOME/2) : 1;   // 盘中赚过、收盘亏
+  const peak=S.dayPeakW==null?0:Math.max(0,S.dayPeakW), flipF=pl<0&&peak>=DAILY_INCOME&&waterGap()<0? 1+Math.min(1,peak/DAILY_INCOME/2) : 1;   // 盘中账户还赚着、收盘跌回本金以下
   S.dayLev=Math.max(S.dayLev||1,curLev());
   if(pl<0) lossStress(5*Math.log(1+r)*watchF*(1+0.15*S.spend+0.6*(S.numb||0))*stressAmp()*flipF);   // 亏钱：乘上杠杆系数，不加杠杆封顶 55
   else S.stress-=1.2*Math.log(1+r)*reliefF();   // 赚钱的日子：压力不涨，还会松一点（计划落下太多时松得少）
   if(flipF>1) S.flipDays=(S.flipDays||0)+1;
-  const wasUp=(S.hist.at(-1)||{eq:S.start}).eq>=S.start*1.01, nowDown=eq<S.start;   // 前一天收盘还赚着，今天跌破本金
-  if(wasUp&&nowDown) lossStress(8*stressAmp());
+  const wasUp=(S.lastCloseWG==null?0:S.lastCloseWG)>=S.start*0.01, nowDown=waterGap()<0;   // 前一天收盘还在水上，今天跌回本金以下
+  if(wasUp&&nowDown&&!S.flipped) lossStress(8*stressAmp());
   const gapSt=8*gap*(1+d/12); S.stress+=gapSt;   // 计划落下得越多、日子越往后，越慌
   if(S.T>=8 && r<S.T*0.2){ if(pl<0) lossStress(5); empty=true; }
-  const levLines=[]; levClose(levLines);
+  const levLines=[]; levClose(levLines); proxTick(); S._waterLine=null; waterCheck("close"); S.lastCloseWG=waterGap();
   const oldT=S.T; S.T=Math.max(S.T*0.985,r);
   // 隐藏属性：盯盘残留。近几天盯盘越久，学习和实习效率越低（玩家看不到数值）
   const todayStock=S.appTime.stock-(S._ps||0);
@@ -3882,6 +3928,10 @@ function closeMarket(){
   const lines=[];
   if(flipF>1) lines.push(`今天最多赚过 ${fmt(peak)}，收盘却亏了 ${fmt(-pl)}。从赚到亏，比一直亏更难受。`);
   if(wasUp&&nowDown) lines.push("前几天账户还是赚的，今天跌破了本金。");
+  if(S._waterLine) lines.push(S._waterLine);
+  else if(!isWater()&&(S.stkSt||0)>=3) lines.push(`离回本还差 ${fmt(-waterGap())}。回到本金以上，这些压力才会放下。`);
+  if(levNow()>1&&posValue()>0&&liqClose()>=0.5) lines.push(`持仓再跌 ${(Math.max(0,liqRoom())*100).toFixed(1)}% 就会碰到平仓线。`);
+  if(S.liqNegDay===d) lines.push(`强平之后，账户还是负的：${fmt(equity())}。你倒欠${S.liquidated==="margin"||!S.pzBurned?"券商":"倍增宝"} ${fmt(-equity())}。`);
   if(pl<0&&r>=3){ const L=S.dayLev||1;
     if(L<1.2) lines.push(vary("ownMoney",[`亏了 ${fmt(-pl)}，心里不太痛快。好在没借钱，不会被平仓，也没人催你还。`,"今天亏了，有点烦。但仓位里没有借来的钱，至少今晚睡得着。","亏的是自己的生活费。不高兴，但还扛得住。"]));
     else if(L>=1.5) lines.push(`仓位里有借来的钱（今天最多约 ${L.toFixed(1)} 倍）。同样跌一下，心里沉得多。`); }
@@ -4082,7 +4132,7 @@ function afterClose(){
 /* ============ 生活事件 ============ */
 function pickEvent(){
   const d=S.day, h=S.hist[S.hist.length-1];
-  if(S.liquidated){ const pz=S.liquidated==="pz"; S.liquidated=false; return {title:"强制平仓",text:pz?"倍增宝的短信：「您的账户已触及平仓线，系统已强制平仓。」\n十倍的仓位，跌了几个点，就没了。\n你盯着剩下的数字，想算清楚它是多少个月的生活费，算到一半停下了。":"你的融资仓位被强制卖出了。\n你盯着那个数字看了很久，想算清楚它是多少个月的生活费，算到一半停下了。",choices:[["ok","……"]],fx:()=>{}};}
+  if(S.liquidated){ const pz=S.liquidated==="pz"; S.liquidated=false; const neg=S.liqNegDay===d&&equity()<0?`\n卖完了，账户还是负的：你倒欠${pz?"倍增宝":"券商"} ${fmt(-equity())}。`:""; return {title:"强制平仓",text:(pz?"倍增宝的短信：「您的账户已触及平仓线，系统已强制平仓。」\n十倍的仓位，跌了几个点，就没了。\n你盯着剩下的数字，想算清楚它是多少个月的生活费，算到一半停下了。":"你的融资仓位被强制卖出了。\n你盯着那个数字看了很久，想算清楚它是多少个月的生活费，算到一半停下了。")+neg,choices:[["ok","……"]],fx:()=>{}};}
   if(d===12 && S.internState==="open"){
     const it=S.it, done=it.proj>=it.projNeed; let rep_=0; for(let i=0;i<it.emails;i++) if(Math.random()<(done?0.14:0.05)) rep_++; it.replies=rep_;
     if(it.emails===0){S.internState="missed"; return {title:"实习申请截止了",text:`今天 23:59 截止。你一封简历都没投出去。\n小周的申请三天前就交了。`,choices:[["ok","下次吧"]],fx:()=>{S.stress+=4}};}
@@ -4304,7 +4354,7 @@ function loanBorrow(a){
     <div class="choices"><button class="btn primary" data-c="ok" type="button">确认借款</button><button class="btn" data-c="no" type="button">算了</button></div>`,c=>{
     closeSheet(); if(c!=="ok") return;
     S.loans.push({id:"L"+S.day+"_"+S.loans.length,amt:a,d:S.day,due:S.day+LOAN_DAYS,paid:false}); S.cash+=get; S.loanFees+=a-get; S.openEquity+=get;   // 借来的钱不算今天赚的
-    S.numb=Math.min(1,(S.numb||0)+0.08); S.stress=Math.min(stressCap(),S.stress+3*stressAmp()); hrKick(8); sfx("coin");
+    S.numb=Math.min(1,(S.numb||0)+0.08); stkAdd(3*stressAmp()); hrKick(8); sfx("coin");
     toast(`${fmt(get)} 已到账`); renderLoan(); updateChrome();
   });
 }
@@ -4331,9 +4381,9 @@ function loanMorning(d){
 const PZ_OPTS=[{lev:5,rate:0.0006},{lev:10,rate:0.0008}];
 const pzDrop=lev=>{ const m={2:0.3,5:0.13,10:0.07}[lev], e=1/lev; return Math.max(1,Math.round((e-m)/(1-m)*100)); };   // 满仓时跌多少会被强平
 function renderPz(){
-  const eq=Math.max(0,equity()), cur=S.pz;
+  const eqRaw=equity(), eq=Math.max(0,eqRaw), cur=S.pz;
   setView(`<div class="h-app"><button class="back" id="bk" type="button" aria-label="返回">‹</button><h2>倍增宝</h2><span class="small">最高 10 倍</span></div>
-    <div class="ln-card pz"><div class="small">你的本金（账户总资产）</div><div class="ln-big">${fmt(eq)}</div><div class="small">按天计费 · 随借随还 · 当天到账</div></div>
+    <div class="ln-card pz"><div class="small">你的本金（账户总资产）</div><div class="ln-big"${eqRaw<0?' style="color:#e0524a"':""}>${fmt(eqRaw)}</div><div class="small">${eqRaw<0?`穿仓：你倒欠 ${fmt(-eqRaw)}，要先还上才能再签约`:"按天计费 · 随借随还 · 当天到账"}</div></div>
     ${cur?`<div class="ln-sec">配资中</div><div class="ln-row"><span><b>${cur.lev} 倍 · 额度 ${fmt(S.creditLine)}</b><small>管理费每天 ${fmt(Math.round(S.creditLine*cur.rate))}（不管用没用都收）· 满仓下跌约 ${pzDrop(cur.lev)}% 就强制平仓</small></span><button class="btn" type="button" id="pzEnd">结束配资</button></div>`
       :(S.pzBurned?`<p class="ln-fine">第 ${S.pzBurned} 天，你的账户触及平仓线，被强制平仓${S.pzBurns>1?`（已经是第 ${S.pzBurns} 次）`:""}。</p><div class="ln-rev"><b>倍增宝客服</b>：亲，平仓只是暂时的。重新签约当天到账，抓住下一波就能回本。</div>`:"")+PZ_OPTS.map(o=>`<div class="ln-row"><span><b>${o.lev} 倍配资 · 可操盘 ${fmt(eq*o.lev)}</b><small>管理费每天 ${fmt(Math.round(eq*(o.lev-1)*o.rate))} · 满仓跌约 ${pzDrop(o.lev)}% 就会被强制平仓</small></span><button class="btn" type="button" data-pz="${o.lev}" ${eq<1000?"disabled":""}>申请</button></div>`).join("")}
     <div class="ln-sec">大家都在说</div>
@@ -4349,7 +4399,7 @@ function pzApply(lev){
     <div class="choices"><button class="btn primary" data-c="ok" type="button">签约，马上到账</button><button class="btn" data-c="no" type="button">再想想</button></div>`,c=>{
     closeSheet(); if(c!=="ok") return;
     S.pz={lev,rate:o.rate,d:S.day}; S.creditLine=eq*(lev-1); S.pzDays=(S.pzDays||0); if(S.pzBurned) S.pzResign=(S.pzResign||0)+1;
-    S.numb=Math.min(1,(S.numb||0)+0.1); S.stress=Math.min(stressCap(),S.stress+4*stressAmp()); hrKick(10); sfx("coin"); deviate("P3",`开通了 ${lev} 倍配资`);
+    S.numb=Math.min(1,(S.numb||0)+0.1); stkAdd(4*stressAmp()); hrKick(10); sfx("coin"); deviate("P3",`开通了 ${lev} 倍配资`);
     toast(`${lev} 倍配资已开通，额度 ${fmt(S.creditLine)}`); renderPz(); updateChrome();
   });
 }
@@ -4359,8 +4409,9 @@ function levClose(lines){
   if(S.pz){ fee=Math.round(S.creditLine*S.pz.rate); S.cash-=fee; S.pzFees+=fee; S.pzDays=(S.pzDays||0)+1; }
   else if(S.leverage&&S.cash<0){ fee=Math.round(-S.cash*0.0003); S.cash-=fee; S.pzFees+=fee; }
   if(fee) lines.push(`今天的${S.pz?"配资管理费":"融资利息"}：${fmt(fee)}。不管涨跌，这笔钱每天都在走。`);
-  if(levNow()>=5){ S.stress+=4*stressAmp(); }
-  const ow=loanOwed(); if(ow>0){ S.stress+=(S.loans.some(l=>!l.paid&&S.day>l.due)?8:3)*stressAmp(); lines.push(`你还欠秒借 ${fmt(ow)}。${S.loans.some(l=>!l.paid&&S.day>=l.due-1)?"马上就到期了。":""}`); }
+  const down=equity()-S.openEquity<0;   // 借着钱、今天在涨：不加压力
+  if(levNow()>=5&&down){ stkAdd(4*stressAmp()); }
+  const ow=loanOwed(); if(ow>0){ if(S.loans.some(l=>!l.paid&&S.day>l.due)) S.stress+=8*stressAmp(); else if(down) stkAdd(3*stressAmp()); lines.push(`你还欠秒借 ${fmt(ow)}。${S.loans.some(l=>!l.paid&&S.day>=l.due-1)?"马上就到期了。":""}`); }
   if(canBreak()&&S.stress>=80) lines.push("十倍的仓位，背着借款。你发现自己已经很久没有好好喘过气了。");
 }
 
@@ -4743,7 +4794,8 @@ function showReport(){
       ${S.radi.tip?`<li>你跟小周说想回本。第二天，小周给你转发了一条「内幕消息」。</li>`:""}
       ${S.boughtPhone?`<li>开学前，你用八千块里的七千，给妈妈买了一部新手机。她在圈子里发了好几条用新手机拍的照片。</li>`:META.seenMomPhone?`<li>妈妈的手机，还是那部用了六年的。</li>`:""}
       ${(S.loans||[]).length?`<li>你在「秒借」借了 ${S.loans.length} 笔，一共 ${fmt(S.loans.reduce((a,l)=>a+l.amt,0))}。服务费和利息一共 ${fmt(S.loanFees+S.loans.filter(l=>!l.paid).reduce((a,l)=>a+loanDue(l)-l.amt,0))}。${loanOwed()?`到最后，还欠 ${fmt(loanOwed())}。`:"都还上了。"}${S.collectorCalled?"催收的电话，打到了妈妈那里。":""}</li>`:""}
-      ${S.pzFees?`<li>配资管理费和融资利息，一共交了 ${fmt(S.pzFees)}。${S.pzBurned?(S.pzBurns>1?`倍增宝强制平仓 ${S.pzBurns} 次，最后一次在第 ${S.pzBurned} 天。`:`第 ${S.pzBurned} 天，倍增宝强制平仓。`):""}${S.pzResign?`爆仓之后，你又签了 ${S.pzResign} 次。`:""}</li>`:""}
+      ${S.pzFees?`<li>配资管理费和融资利息，一共交了 ${fmt(S.pzFees)}。${S.pzBurned?(S.pzBurns>1?`倍增宝强制平仓 ${S.pzBurns} 次，最后一次在第 ${S.pzBurned} 天。`:`第 ${S.pzBurned} 天，倍增宝强制平仓。`):""}${S.pzResign?`爆仓之后，你又签了 ${S.pzResign} 次。`:""}${S.chuancang?`有 ${S.chuancang} 次强平卖完还倒欠钱（穿仓），最多倒欠 ${fmt(-S.negMax)}。`:""}</li>`:""}
+      ${S.waterClears?`<li>有 ${S.waterClears} 次，账户回到本金以上，攒了好几天的压力一下子放下了。</li>`:""}
       ${(()=>{ const sl=S.shopLog||[]; if(!sl.length) return ""; const t=sl.reduce((a,x)=>a+x.cost,0), pp=sl.filter(x=>x.paper).reduce((a,x)=>a+x.cost,0), end=equity();
         return `<li>你在「附近好店」花了 ${fmt(t)}${pp?`，其中 ${fmt(pp)} 是账面赚着钱的时候花的`:""}。${pp&&end<S.start?"后来账面上的钱没了，花出去的钱也没有回来。":""}</li>`+((S.numb||0)>=0.4?`<li>最后那几天，你看价格的方式变了：先算它是账面赚的百分之几。这个习惯，比亏掉的钱更难改回来。</li>`:""); })()}
       ${S.lookDay?`<li>第 ${S.lookDay} 天，你换了${{cut:"发型",dye:"发色",clothes:"衣服"}[S.lookWhat]||"造型"}。相册里第一张和最后一张的你，看起来不太一样。</li>`:""}

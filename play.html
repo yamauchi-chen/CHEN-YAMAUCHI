@@ -1974,7 +1974,7 @@ function studyMinute(){
 /* ============ 崩溃：压力过高又亏得很重时，在图书馆或教室当场崩溃 ============ */
 function checkBreakdown(){
   if(S.brokeToday||S.paused||!(S.loc==="library"||S.loc==="class")) return;
-  const pl=equity()-S.openEquity, r=-pl/DAILY_INCOME, dd=equity()/S.start-1;
+  const pl=equity()-S.openEquity, r=-pl/DAILY_INCOME, dd=netWorth()/S.start-1;
   if(S.stress>=85 && ((pl<0&&r>=12)||dd<=-0.3)) triggerBreakdown(pl);
 }
 function triggerBreakdown(pl){
@@ -2039,7 +2039,8 @@ function lossCeil(){ return 55+(stressCap()-55)*lossK(); }                 // �
 /* ============ 水上 / 水下 ============
    水上＝账户总资产扣掉网贷欠款，回到本金以上。在水上，炒股不攒压力；一回到水上，这一轮炒股攒下的压力立刻清空。
    S.stkSt：压力里「炒股攒下的」那一部分；S.proxSt：「离平仓线太近」那一部分（随时跟着距离变，远离了就消）。 */
-const netWorth=()=>equity()-loanOwed();
+const borrowedAll=()=>loanOwed()+(S.borrowed||0);   // 网贷还欠的 + 跟妈妈借的
+const netWorth=()=>equity()-borrowedAll();          // 扣掉借来的钱，才是你自己的
 const waterGap=()=>netWorth()-S.start;
 const isWater=()=>waterGap()>=0;
 const LIQ_LINE={2:0.3,5:0.13,10:0.07};
@@ -2072,7 +2073,7 @@ function waterCheck(where){   // 回到水上：这一轮炒股攒下的压力�
   S.wasWater=w; }
 function lossStress(v){ if(!(v>0)||isWater()) return 0; stkSync(); const f=lossF(), room=lossCeil()-S.stress;
   if(room<=0){ S.lossCapped=true; return 0; }
-  const soft=lossK()<1? Math.min(1,room/12+0.15) : 1;   // 有封顶时，越接近上限涨得越慢；5 倍以上不减速
+  const soft=(lossK()<1||stressCap()<100)? Math.min(1,room/12+0.15) : 1;   // 上限低于 100 时，越接近上限涨得越慢
   const add=Math.min(room, v*f*soft); if(add<v*f*0.99) S.lossCapped=true;
   S.stress+=add; S.stkSt+=add; S._stLast=S.stress; return add; }
 function planLine(){ const p=planNow(); return p.intern&&S.internState==="open"?`按计划，实习准备今天该到 ${Math.round(p.itExp*100)}%，你在 ${Math.round(p.itAct*100)}%`:`按计划，一轮今天该到 ${Math.round(p.kyExp*100)}%，你在 ${Math.round(p.kyAct*100)}%`; }
@@ -2122,12 +2123,14 @@ function tickMinute(){
     Object.keys(S.hold).forEach(c=>{const h=S.hold[c],s=stock(c),q=sellQ(c,h); if(q<=0){ kept+=h.qty; return; } const g=q*s.price,fe=fee(g);S.cash+=g-fe;S.fees+=fe;S.sells.push({day:S.day,pnl:(s.price-h.cost)*q-fe,viol:true});
       h.realized=(h.realized||0)+(s.price-h.cost)*q-fe; h.soldQty=(h.soldQty||0)+q; h.sellAmt=(h.sellAmt||0)+g; h.qty-=q; kept+=h.qty; if(!h.qty){ recordClear(s,h,"强制平仓"); delete S.hold[c]; } });
     const after=equity(); stkSync(); S.stkSt+=S.proxSt; S.proxSt=0;   // 怕的事真的发生了：这份压力不会因为仓位没了就消失
+    S.liqDay=S.day;
     if(first){ S.liquidated=wasPz?"pz":"margin"; const add=Math.max(0,Math.min(wasPz?35:25,stressCap()-S.stress)); S.stress+=add; S.stkSt+=add; S._stLast=S.stress;
       if(wasPz){ S.pzBurned=S.day; S.pzBurns=(S.pzBurns||0)+1; } }
     if(after<0){ if(!S.liqNegDay||S.liqNegDay!==S.day){ S.chuancang=(S.chuancang||0)+1; } S.liqNegDay=S.day; S.liqNeg=after; S.negMax=Math.min(S.negMax||0,after); }
     if(kept>0){ S.liqPending=true; S.creditLine=0; }
     else { S.liqPending=false; S.liqSold=false; if(wasPz){ S.pz=null; S.creditLine=S.leverage?Math.max(0,equity()):0; } }
-    showBanner(wasPz?"倍":"涨",wasPz?"倍增宝":"涨涨证券",(first?(wasPz?"账户跌破平仓线，已强制平仓。":"维持担保比例不足，已强制平仓。"):"剩下的仓位也被强制卖掉了。")+(after<0?`卖完还倒欠 ${fmt(-after)}（穿仓）。`:"")+(kept?`还有 ${kept} 股是今天买的或封在跌停上，卖不掉，等能卖的时候再平。`:""),"stock");
+    const bbMsg=bigBurnCheck();
+    showBanner(wasPz?"倍":"涨",wasPz?"倍增宝":"涨涨证券",bbMsg+(first?(wasPz?"账户跌破平仓线，已强制平仓。":"维持担保比例不足，已强制平仓。"):"剩下的仓位也被强制卖掉了。")+(after<0?`卖完还倒欠 ${fmt(-after)}（穿仓）。`:"")+(kept?`还有 ${kept} 股是今天买的或封在跌停上，卖不掉，等能卖的时候再平。`:""),"stock");
     } else if(S.liqStuckDay!==S.day){ S.liqStuckDay=S.day; S.liqPending=true; S.creditLine=0;
       showBanner(S.pz?"倍":"涨",S.pz?"倍增宝":"涨涨证券","账户已经跌破平仓线，但仓位封在跌停上（或是今天刚买的），强平卖单卖不出去。","stock"); }
   }
@@ -3664,7 +3667,7 @@ mom:[
  {id:"tm_home",t:"妈，家里最近怎么样？",b:()=>vary("tmHome",[["都好。你爸最近迷上了钓鱼，钓一天回来两条小鱼，还挺高兴。"],["都好。楼下新开了家面馆，等你回来带你去。"],["都好。你房间妈每周还是会打扫一遍。"],["都好。你爸血压稳了，医生说再吃一个月药就行。别担心。"]]),r:1,s:-3},
  {id:"tm_focus",w:c=>c.todayStudy>=90,t:()=>`妈，我今天${studySay(S.todayStudy)}。`,b:["真棒！","妈就知道你行。你爸说晚上加个菜庆祝，虽然你吃不着哈哈。"],r:1,s:-4},
  {id:"tm_miss",t:"有点想家了。",b:["想家就回来！","妈给你做排骨。"],r:2,s:-4,n:{t:"这周末回来吗？",o:[{t:"回不去……下周吧。",b:"好，下周。妈先把排骨冻上。",r:1},{t:"今晚视频吧。",b:"好！",r:1,fx:()=>{S.invite.video=S.day}}]}},
- {id:"tm_money",once:1,w:c=>c.st&&(c.ydown||equity()<S.start*0.75),t:"妈，能先借我点钱吗？",b:"要多少？出什么事了？",r:0,n:{t:"跟妈说实话。",o:[
+ {id:"tm_money",once:1,w:c=>c.st&&(c.ydown||netWorth()<S.start*0.75),t:"妈，能先借我点钱吗？",b:"要多少？出什么事了？",r:0,n:{t:"跟妈说实话。",o:[
    {t:"买资料，五百。",b:"好，马上转你。",r:-1,s:3,lie:1,fx:()=>{S.cash+=500; S.borrowed=(S.borrowed||0)+500;}},
    {t:"……我炒股亏了。",b:["……","亏了多少都没关系。钱妈先转你，别再往里放了，好吗？"],r:1,s:-6,fx:()=>{S.confessed=true; S.cash+=500; S.borrowed=(S.borrowed||0)+500;}},
    {t:"算了，没事。",b:"……有事一定跟妈说。",r:0}]}},
@@ -3908,6 +3911,7 @@ function closeMarket(){
   const gapSt=8*gap*(1+d/12); S.stress+=gapSt;   // 计划落下得越多、日子越往后，越慌
   if(S.T>=8 && r<S.T*0.2){ if(pl<0) lossStress(5); empty=true; }
   const levLines=[]; levClose(levLines); proxTick(); S._waterLine=null; waterCheck("close"); S.lastCloseWG=waterGap();
+  bigBurnCheck(); S.netPeak=Math.max(S.netPeak||S.start,netWorth());
   const oldT=S.T; S.T=Math.max(S.T*0.985,r);
   // 隐藏属性：盯盘残留。近几天盯盘越久，学习和实习效率越低（玩家看不到数值）
   const todayStock=S.appTime.stock-(S._ps||0);
@@ -3928,6 +3932,7 @@ function closeMarket(){
   const lines=[];
   if(flipF>1) lines.push(`今天最多赚过 ${fmt(peak)}，收盘却亏了 ${fmt(-pl)}。从赚到亏，比一直亏更难受。`);
   if(wasUp&&nowDown) lines.push("前几天账户还是赚的，今天跌破了本金。");
+  if(S.bigBurn===d) lines.push(`这一次爆仓，从最高点算，亏掉了 ${fmt(S.bigBurnAmt)}。你觉得自己随时会撑不住。`);
   if(S._waterLine) lines.push(S._waterLine);
   else if(!isWater()&&(S.stkSt||0)>=3) lines.push(`离回本还差 ${fmt(-waterGap())}。回到本金以上，这些压力才会放下。`);
   if(levNow()>1&&posValue()>0&&liqClose()>=0.5) lines.push(`持仓再跌 ${(Math.max(0,liqRoom())*100).toFixed(1)}% 就会碰到平仓线。`);
@@ -4015,7 +4020,7 @@ function showDaySummary(next){
       <div class="pl focus">${hrs(S.todayStudy)}<small> 小时专注</small></div>
       <div class="sub">${S.tomToday} 个番茄${fails?` · 作废 ${fails} 个`:""} · 真正学进去 ${fmtMin(S.todayEff)}${noApp?"":` · 今天盈亏 <b class="${pl>0?"up":pl<0?"down":""}">${pl>=0?"+":""}${fmt(pl)}</b>`}</div>
       ${noApp?"":`<div class="stats">
-        <div class="stat"><div class="k">总资产</div><div class="v">${fmt(eq)}</div><div class="n">开局 ${fmt(S.start)} · ${pct(eq/S.start-1)}</div></div>
+        <div class="stat"><div class="k">${borrowedAll()>0?"扣掉借的钱":"总资产"}</div><div class="v">${fmt(netWorth())}</div><div class="n">开局 ${fmt(S.start)} · ${pct(netWorth()/S.start-1)}${borrowedAll()>0?` · 账户里 ${fmt(eq)}，其中 ${fmt(borrowedAll())} 是借的`:""}</div></div>
         <div class="stat"><div class="k">压力</div><div class="v">${before.toFixed(0)} → ${S.stress.toFixed(0)}</div><div class="sbar"><i style="width:${S.stress.toFixed(0)}%"></i></div></div>
         <div class="stat"><div class="k">今天盯盘</div><div class="v">${hrs(watchMin)} 小时</div><div class="n">盈亏带来的压力 ×${watchF.toFixed(1)}</div></div>
         <div class="stat"><div class="k">今天的番茄</div><div class="v">${S.tomToday} 个</div><div class="n">${fails?`中途离开，作废 ${fails} 个`:"一个都没作废"}</div></div>
@@ -4030,7 +4035,7 @@ function showDaySummary(next){
       <div class="pl ${pl>0?"up":pl<0?"down":""}">${pl>=0?"+":""}${fmt(pl)}</div>
       <div class="sub">相当于奶茶店打工 ${(Math.abs(pl)/HOUR_WAGE).toFixed(1)} 小时 · ${r.toFixed(1)} 倍日常收入</div>
       <div class="stats">
-        <div class="stat"><div class="k">总资产</div><div class="v">${fmt(eq)}</div><div class="n">开局 ${fmt(S.start)} · ${pct(eq/S.start-1)}</div></div>
+        <div class="stat"><div class="k">${borrowedAll()>0?"扣掉借的钱":"总资产"}</div><div class="v">${fmt(netWorth())}</div><div class="n">开局 ${fmt(S.start)} · ${pct(netWorth()/S.start-1)}${borrowedAll()>0?` · 账户里 ${fmt(eq)}，其中 ${fmt(borrowedAll())} 是借的`:""}</div></div>
         <div class="stat"><div class="k">压力</div><div class="v">${before.toFixed(0)} → ${S.stress.toFixed(0)}</div><div class="sbar"><i style="width:${S.stress.toFixed(0)}%"></i></div></div>
         <div class="stat"><div class="k">今天盯盘</div><div class="v">${hrs(watchMin)} 小时</div><div class="n">盈亏带来的压力 ×${watchF.toFixed(1)}</div></div>
         <div class="stat"><div class="k">今天专注</div><div class="v">${hrs(S.todayStudy)} 小时</div><div class="n">${S.tomToday} 个番茄 · ${S.studyMode==="intern"?"准备实习":"考研复习"}</div></div>
@@ -4316,8 +4321,19 @@ function eveDo(c){
    压满 100（晕倒）只会发生在「高倍杠杆（配资 5 倍以上）＋ 身上还背着借款」的时候；其余情况最多到崩溃边缘。 */
 const levNow=()=>S.pz?S.pz.lev:(S.leverage?2:1);
 const loanOwed=()=>(S.loans||[]).reduce((a,l)=>a+loanDue(l),0);
-const canBreak=()=>levNow()>=5&&loanOwed()>0;
-const stressCap=()=>canBreak()?100:94;
+/* 压力是一天天压上来的：上限从第 1 天的 64 慢慢涨，第 17 天才到 100。
+   所以崩溃一般在第 17 天以后；只有一次爆仓（强平或穿仓）亏掉 10 万以上，上限才会提前打开。 */
+const BREAK_DAY=17, BIG_BURN=100000;
+const canBreak=()=>(levNow()>=5&&loanOwed()>0)||!!S.bigBurn;
+const stressRamp=()=>(S.bigBurn||S.day>=BREAK_DAY)?100:Math.min(100,62+2.2*S.day);
+const stressCap=()=>Math.min(canBreak()?100:94, stressRamp());
+function bigBurnCheck(){
+  if(S.bigBurn) return "";
+  const peak=Math.max(S.netPeak||S.start,S.start), drop=peak-netWorth();
+  if(drop>=BIG_BURN && (S.liqDay===S.day || netWorth()<0)){
+    S.bigBurn=S.day; S.bigBurnAmt=drop; S.stress=Math.min(100,S.stress+20); S._stLast=S.stress; hrKick(30);
+    return `这一次爆仓，从最高点算你亏掉了 ${fmt(drop)}。`; }
+  return ""; }
 function stressTier(v){ const x=v==null?S.stress:v; return x>=80?3:x>=60?2:x>=40?1:0; }
 const TIER_N=["放松","紧绷","焦虑","崩溃边缘"];
 const stressStudyF=()=>[1,0.9,0.75,0.55][stressTier()];
@@ -4412,7 +4428,7 @@ function levClose(lines){
   const down=equity()-S.openEquity<0;   // 借着钱、今天在涨：不加压力
   if(levNow()>=5&&down){ stkAdd(4*stressAmp()); }
   const ow=loanOwed(); if(ow>0){ if(S.loans.some(l=>!l.paid&&S.day>l.due)) S.stress+=8*stressAmp(); else if(down) stkAdd(3*stressAmp()); lines.push(`你还欠秒借 ${fmt(ow)}。${S.loans.some(l=>!l.paid&&S.day>=l.due-1)?"马上就到期了。":""}`); }
-  if(canBreak()&&S.stress>=80) lines.push("十倍的仓位，背着借款。你发现自己已经很久没有好好喘过气了。");
+  if(levNow()>=5&&loanOwed()>0&&S.stress>=80) lines.push("十倍的仓位，背着借款。你发现自己已经很久没有好好喘过气了。");
 }
 
 /* ============ 附近好店：花钱的地方 ============
@@ -4455,7 +4471,7 @@ const SHOPS=[
 ];
 function shopById(k){ return SHOPS.find(x=>x.k===k); }
 function shopItem(sh,id){ return sh.items.find(x=>x.id===id); }
-const paperGain=()=>S.installed.stock?Math.max(0,equity()-S.start):0;   // 账面上「赚」的钱
+const paperGain=()=>S.installed.stock?Math.max(0,netWorth()-S.start):0;   // 账面上「赚」的钱
 const shopRelief=()=>(1/(1+0.1*S.spend))*(1-0.6*(S.numb||0))*reliefF();
 /* 价格在你眼里是什么：一开始是打工几个小时、几天生活费；后来变成「今天账面的百分之几」 */
 function priceSense(p){
@@ -4604,7 +4620,7 @@ function postLook(img,it,look){
 
 /* 结局前的一段对话：说人话；番茄、时长这些数字，放到后面的报告里 */
 function endScript(kind){
-  const mock=mockScore(), pass=mock>=330, eq=equity(), lost=S.start-eq, zhouOk=(S.zhouDoubt||0)>=2, traded=S.sells.length>0||Object.keys(S.hold).length>0||S.clears.length>0;
+  const mock=mockScore(), pass=mock>=330, eq=netWorth(), lost=S.start-eq, zhouOk=(S.zhouDoubt||0)>=2, traded=S.sells.length>0||Object.keys(S.hold).length>0||S.clears.length>0;
   const L={
     focus:[
       {label:"第二十天",bg0:"library",card:["第二十天","图书馆 · 闭馆前"]},
@@ -4697,12 +4713,12 @@ function whatIf(lost,next){
 function albumImgFor(k){ const p=pastPhoto(k); return p?(oldPhone(p.cv,k+":"+(isF()?"f":"m")+lk0())||p.img):null; }
 function showReport(){
   if(!S._endTalked){ S._endTalked=true; closeSheet(); S.phase="report"; S.ended=true;
-    const eq0=equity(), ret0=eq0/S.start-1, k0=S.collapsed?"collapse":S.skipped20?"focus":endKind(ret0);
+    const eq0=netWorth(), ret0=eq0/S.start-1, k0=S.collapsed?"collapse":S.skipped20?"focus":endKind(ret0);
     vnStart(endScript(k0),()=>whatIf(S.start-eq0,showReport),S.collapsed?`第 ${S.day} 天`:"第二十天"); return; }
   closeSheet(); S.phase="report"; S.ended=true; META.runs++;
-  if(S.start-equity()>0&&S.sawMomPost&&!S.boughtPhone) META.momPhoneUnlock=true;
+  if(S.start-netWorth()>0&&S.sawMomPost&&!S.boughtPhone) META.momPhoneUnlock=true;
   saveMeta();
-  const eq=equity(), ret=eq/S.start-1, H=S.hist, n=H.length;
+  const eq=netWorth(), ret=eq/S.start-1, H=S.hist, n=H.length;
   const totalMin=Object.values(S.appTime).reduce((a,b)=>a+b,0)||1;
   const apps=[["炒股","stock","#e09a1b"],["专注","study","#e5483d"],["财讯","news","#6a6f80"],["股友社区","comm","#e0524a"],["消息","chat","#3fbf6a"],["圈子","social","#5b6cf0"],["主屏","home","#999"]];
   const keep=S.sells.filter(x=>!x.viol), brk=S.sells.filter(x=>x.viol);
@@ -4712,8 +4728,8 @@ function showReport(){
   const best=Math.max(0,...H.map(x=>x.pl));
   const kind = S.collapsed?"collapse": endKind(ret);
   const end = {
-    win:`账户：${fmt(eq)}（${pct(ret)}）。\n你赚到了。${eq-S.start>=8000?"比小周一整个暑假的实习工资还多。":eq-S.start>=4000?"比小周实习一个月的工资还多。":`相当于奶茶店打工 ${Math.round((eq-S.start)/HOUR_WAGE)} 小时。`}\n\n六月，你坐在自习室里。课本摊开着。\n你看了一眼手机。\n只是一眼。\n\n${best>=DAILY_INCOME*5?`你最好的那一天赚了 ${fmt(best)}，相当于打工 ${Math.round(best/HOUR_WAGE)} 小时。从那以后，平常的日子都很难再让你有感觉。`:"赚得不多。可你已经记住了，钱可以这样来。"}\n${best>=DAILY_INCOME*5?"你再也不想经历第二次。可你也回不去了。":"你说以后不碰了。可你已经在等下一次了。"}`,
-    loss:`账户：${fmt(eq)}（${pct(ret)}）。\n亏掉的 ${fmt(S.start-eq)}，相当于奶茶店打工 ${Math.round((S.start-eq)/HOUR_WAGE)} 小时，或者 ${Math.round((S.start-eq)/DAILY_INCOME)} 天的生活费。\n\n${S.confessed?"你跟妈妈说了实话。她没有怪你。":"你没有告诉妈妈。"}\n你在想，如果再给你一次机会，你一定能赢回来。`,
+    win:`${borrowedAll()>0?"扣掉借的钱，":""}账户：${fmt(eq)}（${pct(ret)}）。\n你赚到了。${eq-S.start>=8000?"比小周一整个暑假的实习工资还多。":eq-S.start>=4000?"比小周实习一个月的工资还多。":`相当于奶茶店打工 ${Math.round((eq-S.start)/HOUR_WAGE)} 小时。`}\n\n六月，你坐在自习室里。课本摊开着。\n你看了一眼手机。\n只是一眼。\n\n${best>=DAILY_INCOME*5?`你最好的那一天赚了 ${fmt(best)}，相当于打工 ${Math.round(best/HOUR_WAGE)} 小时。从那以后，平常的日子都很难再让你有感觉。`:"赚得不多。可你已经记住了，钱可以这样来。"}\n${best>=DAILY_INCOME*5?"你再也不想经历第二次。可你也回不去了。":"你说以后不碰了。可你已经在等下一次了。"}`,
+    loss:`${borrowedAll()>0?"扣掉借的钱，":""}账户：${fmt(eq)}（${pct(ret)}）。\n亏掉的 ${fmt(S.start-eq)}，相当于奶茶店打工 ${Math.round((S.start-eq)/HOUR_WAGE)} 小时，或者 ${Math.round((S.start-eq)/DAILY_INCOME)} 天的生活费。\n\n${S.confessed?"你跟妈妈说了实话。她没有怪你。":"你没有告诉妈妈。"}\n你在想，如果再给你一次机会，你一定能赢回来。`,
     flat:(S.sells.length||S.clears.length||Object.keys(S.hold).length)?`账户：${fmt(eq)}（${pct(ret)}）。\n二十天，涨涨跌跌，最后差不多回到了原点。\n手续费一共 ${fmt(S.fees)}，相当于打工 ${(S.fees/HOUR_WAGE).toFixed(0)} 小时。\n\n你很努力。你研究了消息、盯了盘、算了仓位。\n但这些努力没有改善你的处境。`
       :`账户：${fmt(eq)}（${pct(ret)}）。\n你下载了软件，却几乎没有买卖。二十天，账户停在原地。\n\n可你盯着它的那些时间，没有回来。`,
     collapse:`第 ${S.day} 天下午，你在${S.hasClass?"课上":"图书馆"}晕倒了。\n醒来的时候，第一件事是摸手机看盘。\n\n账户：${fmt(eq)}（${pct(ret)}）。`,
@@ -4752,7 +4768,7 @@ function showReport(){
       <p>开盘前，你有 ${S.readDays.news} 天点开了财讯，${S.readDays.comm} 天点开了股友社区，一共在盘前读了 <b class="num">${hrs(S.preRead)}</b> 小时消息。</p>
       ${S.noStkDays?`<p>有 ${S.noStkDays} 个早上，你说「不打算看股市」。${S.libDays?`其中 ${S.libDays} 天，你空仓、一眼盘都没看，在图书馆自习了一整天。`:""}</p>`:""}</section>
     <section><h4>账户</h4><div class="big ${ret>=0?"up":"down"}">${pct(ret)}</div>
-      <p>${fmt(S.start)} → ${fmt(eq)}。手续费累计 ${fmt(S.fees)}，像一把锉刀，相当于打工 ${(S.fees/HOUR_WAGE).toFixed(1)} 小时。</p></section>
+      <p>${fmt(S.start)} → ${fmt(eq)}。${borrowedAll()>0?`账户里显示 ${fmt(equity())}，但其中 ${fmt(borrowedAll())} 是借来的${loanOwed()>0?`（还欠秒借 ${fmt(loanOwed())}）`:""}${S.borrowed?`（跟妈妈借了 ${fmt(S.borrowed)}）`:""}，不算你的。`:""}手续费累计 ${fmt(S.fees)}，像一把锉刀，相当于打工 ${(S.fees/HOUR_WAGE).toFixed(1)} 小时。</p></section>
     <section><h4>你定的规矩</h4>
       <p>开户测评里，你的风险承受等级是「${esc(S.selfType||"没有做测评")}」。从你的仓位和波动看，你更像「${actual}」。</p>
       <p>守规矩那几天的卖出胜率：${wr(keep)}<br>违背规矩那几天的卖出胜率：${wr(brk)}</p>
@@ -4796,7 +4812,7 @@ function showReport(){
       ${(S.loans||[]).length?`<li>你在「秒借」借了 ${S.loans.length} 笔，一共 ${fmt(S.loans.reduce((a,l)=>a+l.amt,0))}。服务费和利息一共 ${fmt(S.loanFees+S.loans.filter(l=>!l.paid).reduce((a,l)=>a+loanDue(l)-l.amt,0))}。${loanOwed()?`到最后，还欠 ${fmt(loanOwed())}。`:"都还上了。"}${S.collectorCalled?"催收的电话，打到了妈妈那里。":""}</li>`:""}
       ${S.pzFees?`<li>配资管理费和融资利息，一共交了 ${fmt(S.pzFees)}。${S.pzBurned?(S.pzBurns>1?`倍增宝强制平仓 ${S.pzBurns} 次，最后一次在第 ${S.pzBurned} 天。`:`第 ${S.pzBurned} 天，倍增宝强制平仓。`):""}${S.pzResign?`爆仓之后，你又签了 ${S.pzResign} 次。`:""}${S.chuancang?`有 ${S.chuancang} 次强平卖完还倒欠钱（穿仓），最多倒欠 ${fmt(-S.negMax)}。`:""}</li>`:""}
       ${S.waterClears?`<li>有 ${S.waterClears} 次，账户回到本金以上，攒了好几天的压力一下子放下了。</li>`:""}
-      ${(()=>{ const sl=S.shopLog||[]; if(!sl.length) return ""; const t=sl.reduce((a,x)=>a+x.cost,0), pp=sl.filter(x=>x.paper).reduce((a,x)=>a+x.cost,0), end=equity();
+      ${(()=>{ const sl=S.shopLog||[]; if(!sl.length) return ""; const t=sl.reduce((a,x)=>a+x.cost,0), pp=sl.filter(x=>x.paper).reduce((a,x)=>a+x.cost,0), end=netWorth();
         return `<li>你在「附近好店」花了 ${fmt(t)}${pp?`，其中 ${fmt(pp)} 是账面赚着钱的时候花的`:""}。${pp&&end<S.start?"后来账面上的钱没了，花出去的钱也没有回来。":""}</li>`+((S.numb||0)>=0.4?`<li>最后那几天，你看价格的方式变了：先算它是账面赚的百分之几。这个习惯，比亏掉的钱更难改回来。</li>`:""); })()}
       ${S.lookDay?`<li>第 ${S.lookDay} 天，你换了${{cut:"发型",dye:"发色",clothes:"衣服"}[S.lookWhat]||"造型"}。相册里第一张和最后一张的你，看起来不太一样。</li>`:""}
       ${S.spendLog.length?`<li>你出去吃了 ${S.spendLog.length} 顿好的，一共花了 ${fmt(S.spendLog.reduce((a,x)=>a+x.cost,0))}。从那以后，同样的亏损让你更难受。</li>`:""}

@@ -1060,6 +1060,22 @@ body.resizing{cursor:col-resize;user-select:none}
 body.resizing .stage,body.resizing .deskcol{transition:none}
 .mb-max{font-size:13px;line-height:1;padding:2px 6px;border-radius:6px;color:#ece8f4;background:rgba(255,255,255,.08)}
 .mb-max:hover{background:rgba(255,255,255,.18)}
+.tpanel{position:fixed;top:50px;left:16px;z-index:47;width:310px;max-height:calc(100vh - 70px);overflow-y:auto;background:rgba(22,21,29,.96);border:1px solid rgba(242,181,68,.55);border-radius:14px;padding:12px 14px;display:grid;gap:10px;color:#d9d4e6;font-size:12px;backdrop-filter:blur(10px);box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.tpanel[hidden]{display:none}
+.tpanel .tp-h{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.tpanel .tp-h b{color:#f2b544;font-size:13px;letter-spacing:.06em}
+.tpanel .tp-info{line-height:1.7;background:rgba(255,255,255,.04);border-radius:10px;padding:8px 10px;font-variant-numeric:tabular-nums}
+.tpanel .tp-info b{color:#fff}
+.tpanel .tp-sec{display:grid;gap:6px;padding-top:8px;border-top:1px solid rgba(255,255,255,.08)}
+.tpanel .tp-t{font-weight:700;color:#f2b544;letter-spacing:.08em}
+.tpanel .tp-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.tpanel .tbtn{font-size:12px;padding:5px 9px;border-radius:8px;border:1px solid rgba(255,255,255,.18);color:#e9e5f2;background:rgba(255,255,255,.04)}
+.tpanel .tbtn:hover{border-color:#f2b544;color:#fff}
+.tpanel .tbtn.on{border-color:#f2b544;background:rgba(242,181,68,.18);color:#fff}
+.tpanel .tbtn:focus-visible{outline:2px solid #f2b544;outline-offset:2px}
+.tpanel input[type=range]{flex:1;accent-color:#f2b544}
+.tpanel .tp-x{font-size:18px;line-height:1;color:#a9a4b5;padding:2px 6px}
+.tpanel .tp-note{color:#8f8a9c;line-height:1.6}
 .gpanel .gbtn{font-size:12px;padding:5px 10px;border-radius:9px;border:1px solid var(--line);color:#d9d4e6;justify-self:start}
 @media (max-width:1000px){ .clk{display:none} .rsz{display:none} .deskcol{width:100%} }
 </style>
@@ -1314,7 +1330,7 @@ const N3 = () => NM("老三"), NZ = () => NM("小周"), AV3 = () => (S&&S.look&&
 const clockStr = m => {const t=570+m;return Math.floor(t/60)+":"+String(t%60).padStart(2,"0")};
 
 /* ============ 状态 ============ */
-let S;
+let S; let SIMQ=false;   // SIMQ：后台模拟中，不弹提示、不重画画面
 function newGame(){
   // 行情世界在开局一次性随机生成
   S = {
@@ -1807,7 +1823,7 @@ function aucStep(){
   if(S.app==="stock") renderStockLive();
   if(t>=10){ clearTimeout(aucTimer); aucTimer=null; endAuction(); return; }
   S.aucMin++;
-  aucTimer=setTimeout(aucStep,window.__auc||(S.app==="stock"?2400:1300));   // 在看行情、在挂单的时候，竞价走慢一点
+  aucTimer=setTimeout(aucStep,(window.__auc||(S.app==="stock"?2400:1300))/(S.testSpd||1));   // 在看行情、在挂单的时候，竞价走慢一点
 }
 function endAuction(){
   S.stocks.forEach(s=>{ if(!s.delisted) s.price=s.path[0]; });
@@ -2009,7 +2025,7 @@ function loop(ts){
   acc+=dt*sf; const tEl=$("#sb-time"); if(tEl) tEl.classList.toggle("slow",sf<0.95);
   if(performance.now()>clkCueT){ const k=curSpd(); if(k!==clkSpd){ clkSpd=k; setSpd(k); } }
   const per = S.fast? 40 : 170*paceF();
-  while(acc>=per && S.phase==="market"){acc-=per; tickMinute();}
+  const pq=per/(S.testSpd||1); while(acc>=pq && S.phase==="market"){acc-=pq; tickMinute();}
   timer=requestAnimationFrame(loop);
 }
 /* 体感时间：心流里一分钟过得更快；走神时，同样一分钟熬得更久 */
@@ -2033,7 +2049,7 @@ function stressAmp(){ return 1+1.2*(S.gap||0); }       // 落下越多，坏事�
    实际杠杆＝持仓市值 ÷ 账户净值；一天里按用过的最高倍数算（强平之后也不会突然轻松） */
 function curLev(){ const pv=posValue(), eq=equity(); return pv<=0?1:eq<=0?10:Math.max(1,Math.min(10,pv/eq)); }
 function lossLv(){ return Math.max(S.dayLev||1,curLev()); }
-function lossK(){ return Math.min(1,(lossLv()-1)/4); }                       // 1 倍 → 0，5 倍及以上 → 1
+function lossK(){ return brokeDebt()?1:Math.min(1,(lossLv()-1)/4); }                       // 1 倍 → 0，5 倍及以上 → 1
 function lossF(){ return 0.35+0.65*lossK()+0.06*Math.max(0,lossLv()-5); }  // 1 倍 0.35，2 倍约 0.5，5 倍 1，10 倍 1.3
 function lossCeil(){ return 55+(stressCap()-55)*lossK(); }                 // 不加杠杆：亏钱最多把你推到 55（紧绷）
 /* ============ 水上 / 水下 ============
@@ -2096,7 +2112,7 @@ function tickMinute(){
   if(!S.ffEndOn&&S.appTime.stock>=FF_END_MIN){ S.ffEndOn=true; setTimeout(()=>{ toast("累计看盘满 20 小时。看盘页面可以直接快进到收盘了。"); if(S.app==="stock"&&S.phase==="market") reStock(); },200); }
   if(S.fast){S.skipped++; }
   stkSync();
-  { const dp=equity()-S.openEquity, r=Math.abs(dp)/DAILY_INCOME, wg=waterGap(), eqN=equity(), rising=eqN>(S._eqS==null?eqN:S._eqS); S._eqS=eqN;
+  { const dp=equity()-S.openEquity, r=Math.abs(dp)/DAILY_INCOME, wg=waterGap(), eqN=equity(), rising=(S._pvD||0)>0; S._eqS=eqN;
     S.dayPeak=Math.max(S.dayPeak||0,dp); S.dayPeakW=Math.max(S.dayPeakW==null?-Infinity:S.dayPeakW,wg); S.dayLev=Math.max(S.dayLev||1,curLev());
     if(!S.flipped && wg<0 && S.dayPeakW>=DAILY_INCOME){   // 今天账户赚过至少一天生活费，现在跌回本金以下
       S.flipped=true; lossStress(6*stressAmp()); hrKick(lossLv()>=1.5?18:8);
@@ -2110,11 +2126,13 @@ function tickMinute(){
   if(a==="stock"&&S.minute%30===0) habitAdd(-0.025);
   if(a==="stock" && S.loc==="class"){ if(++S.stockStreak>=120){ S.loc="dorm"; toast("你从教室溜回了宿舍"); } } else S.stockStreak=0;
   S.stress=Math.max(0,Math.min(stressCap(),S.stress));
+  const pvPrev=Object.entries(S.hold).reduce((t,[c,h])=>{ const s=stock(c); return t+h.qty*(S.minute===1?s.prev:s.price); },0);   // 同样的持仓，上一分钟（开盘第一分钟比昨天收盘）值多少
   S.stocks.forEach(s=>s.price=s.path[S.minute]); S.index.val=S.index.path[S.minute];
+  S._pvD=posValue()-pvPrev;   // >0 在涨，<0 在跌
   processQueue(); checkLines(false); glowKick=1;
   // 杠杆强平：只在账户往下走的那一分钟触发，不会涨着涨着被平仓。
   // 今天买的（T+1）和封死在跌停上的卖不掉；卖不掉就只能等，等到能卖时可能已经亏穿本金（负资产）。
-  { const eqN=equity(), falling=eqN<(S._eqL==null?eqN:S._eqL); S._eqL=eqN;
+  { const eqN=equity(), falling=(S._pvD||0)<0; S._eqL=eqN;
   if(levNow()>1 && posValue()>0 && falling && (S.liqPending || eqN<posValue()*liqLine())){
     const sellQ=(c,h)=>isLimDn(stock(c))?0:Math.max(0,h.qty-(h.todayQty||0));
     const canSell=Object.entries(S.hold).some(([c,h])=>sellQ(c,h)>0);
@@ -2124,7 +2142,7 @@ function tickMinute(){
       h.realized=(h.realized||0)+(s.price-h.cost)*q-fe; h.soldQty=(h.soldQty||0)+q; h.sellAmt=(h.sellAmt||0)+g; h.qty-=q; kept+=h.qty; if(!h.qty){ recordClear(s,h,"强制平仓"); delete S.hold[c]; } });
     const after=equity(); stkSync(); S.stkSt+=S.proxSt; S.proxSt=0;   // 怕的事真的发生了：这份压力不会因为仓位没了就消失
     S.liqDay=S.day;
-    if(first){ S.liquidated=wasPz?"pz":"margin"; const add=Math.max(0,Math.min(wasPz?35:25,stressCap()-S.stress)); S.stress+=add; S.stkSt+=add; S._stLast=S.stress;
+    if(first){ S.liqCount=(S.liqCount||0)+1; S.liquidated=wasPz?"pz":"margin"; const add=Math.max(0,Math.min(wasPz?35:25,stressCap()-S.stress)); S.stress+=add; S.stkSt+=add; S._stLast=S.stress;
       if(wasPz){ S.pzBurned=S.day; S.pzBurns=(S.pzBurns||0)+1; } }
     if(after<0){ if(!S.liqNegDay||S.liqNegDay!==S.day){ S.chuancang=(S.chuancang||0)+1; } S.liqNegDay=S.day; S.liqNeg=after; S.negMax=Math.min(S.negMax||0,after); }
     if(kept>0){ S.liqPending=true; S.creditLine=0; }
@@ -2260,6 +2278,7 @@ function setSpd(k){
   if(e.textContent!==t||e.className!=="clk-sp "+k){ e.textContent=t; e.className="clk-sp "+k; }
 }
 function clkCue(t){
+  if(SIMQ) return;
   const el=$("#clk"), e=$("#clk-sp"); if(!el||!e) return;
   e.textContent=t; e.className="clk-sp cue"; clkCueT=performance.now()+3400;
   el.classList.remove("cue"); void el.offsetWidth; el.classList.add("cue"); sfx("chime");
@@ -2273,7 +2292,7 @@ function updateTuck(){
   const b=$("#ph-tabB"); if(b){ const n=(S.unread?S.unread.mom+S.unread.jie+S.unread.zhou:0); const t=n?String(n):""; if(b.textContent!==t) b.textContent=t; }
 }
 let toastT;
-function toast(t){const el=$("#toast");el.textContent=NM(t);el.classList.add("show");clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove("show"),2200)}
+function toast(t){if(SIMQ) return; const el=$("#toast");el.textContent=NM(t);el.classList.add("show");clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove("show"),2200)}
 let bannerT, bannerTarget;
 function showBanner(ic,src,text,target,isDca){
   if(S&&S.skipClose) return;
@@ -2293,7 +2312,7 @@ const DAYPH=["pre","market","auction","after","evening"];
 const PHONE_CLS=new Set(["chat","social","album","lock","phome","pfocus","pintro","shop","loan","pz"]);
 const PHONE_SIDE=new Set(["chat","social","album","phone","shop","loan","pz"]);
 const APP_NAME={home:"桌面",stock:"涨涨证券",study:"专注",news:"财讯",comm:"股友社区",store:"应用商店",intro:"大三下的好时候",lapsleep:""};
-function setView(html,cls){ const ph=PHONE_CLS.has(cls), v=$(ph?"#pview":"#view"); v.className="view "+(cls||""); v.innerHTML=NM(html); v.scrollTop=0;
+function setView(html,cls){ if(SIMQ) return; const ph=PHONE_CLS.has(cls), v=$(ph?"#pview":"#view"); v.className="view "+(cls||""); v.innerHTML=NM(html); v.scrollTop=0;
   if(!ph){ const n=$("#mb-app"); if(n) n.textContent=(S&&DAYPH.includes(S.phase)&&S.lapApp)? (APP_NAME[S.lapApp]||"桌面") : (APP_NAME[cls]||"大三下的好时候"); lidAuto(cls); } }
 function phoneBack(){ openApp("phone"); }
 /* 放下手机、回到电脑：学习要重新进入专注，开户问卷要重新弹出；其他程序只是把注意力挪回来，不重画，点击照常生效 */
@@ -2572,7 +2591,7 @@ function renderComm(){
 /* ============ 盘前 8:12–9:15：看不看消息，自己决定 ============ */
 let preTimer=null;
 const preBase=()=>420;
-function preDelay(){ const b=preBase(); return S.app==="study"? b*0.45/((1+0.6*(S.habit||0))*streakX()) : b; }
+function preDelay(){ const b=preBase(); return (S.app==="study"? b*0.45/((1+0.6*(S.habit||0))*streakX()) : b)/(S.testSpd||1); }
 function startPre(){
   S.phase="pre"; S.preMin=0;
   clearTimeout(preTimer);
@@ -2853,6 +2872,7 @@ function renderClears(){
   renderStockLive(true);
 }
 function renderStock(){
+  if(SIMQ) return;
   if(S.stockTab==="pos") return renderPositions();
   if(S.stockTab==="clr") return renderClears();
   if(S.phase==="pre"&&S.accountOpen&&!S.lineTip){ S.lineTip=1; setTimeout(()=>toast("新玩法「✎ 画线下单」：开盘前在日K上画一条线，今天碰到就自动买卖，画完可以去学习"),700); }
@@ -2927,6 +2947,7 @@ function renderStock(){
   renderStockLive(true);
 }
 function renderStockLive(full){
+  if(SIMQ) return;
   if(S.stockTab==="pos"&&$("#p-mv")){
     let mv=0, upl=0; Object.entries(S.hold).forEach(([c,h])=>{ const s=stock(c); mv+=h.qty*s.price; upl+=(s.price-h.cost)*h.qty;
       const e=$("#pp-"+c); if(e){ const r=s.price/h.cost-1; e.innerHTML=`<span class="${upl>=0?"":""}">${s.price.toFixed(2)}</span> <b class="${r>=0?"up":"down"}">${pct(r)}</b>`;
@@ -3870,6 +3891,7 @@ function radiate(d,say){
 
 /* ============ 弹层 ============ */
 function sheet(html,onChoice){
+  if(SIMQ) return;
   const el=document.createElement("div"); el.className="sheet"; el.innerHTML=NM(`<div class="card">${html}</div>`);
   $(PHONE_SIDE.has(S.app)?"#pscreen":"#screen").appendChild(el);
   el.addEventListener("click",e=>{const b=e.target.closest("[data-c]"); if(b) onChoice(b.dataset.c);});
@@ -3932,6 +3954,7 @@ function closeMarket(){
   const lines=[];
   if(flipF>1) lines.push(`今天最多赚过 ${fmt(peak)}，收盘却亏了 ${fmt(-pl)}。从赚到亏，比一直亏更难受。`);
   if(wasUp&&nowDown) lines.push("前几天账户还是赚的，今天跌破了本金。");
+  if(brokeDebt()&&!S.brokeDebtNoted){ S.brokeDebtNoted=d; lines.push(`你已经被强平 ${S.liqCount} 次了，还欠着秒借 ${fmt(loanOwed())}。从今天起，每一笔亏损都像压在胸口上。`); }
   if(S.bigBurn===d) lines.push(`这一次爆仓，从最高点算，亏掉了 ${fmt(S.bigBurnAmt)}。你觉得自己随时会撑不住。`);
   if(S._waterLine) lines.push(S._waterLine);
   else if(!isWater()&&(S.stkSt||0)>=3) lines.push(`离回本还差 ${fmt(-waterGap())}。回到本金以上，这些压力才会放下。`);
@@ -3957,8 +3980,9 @@ function closeMarket(){
 /* 15:00–15:30：收盘后的半小时。不能交易了，消息、圈子、专注都还能用 */
 let afterTimer=null;
 const afterBase=()=>800;
-function afterDelay(){ return S.app==="study"? afterBase()*0.55/((1+0.6*(S.habit||0))*streakX()) : afterBase(); }
+function afterDelay(){ return (S.app==="study"? afterBase()*0.55/((1+0.6*(S.habit||0))*streakX()) : afterBase())/(S.testSpd||1); }
 function startAfter(){
+  if(SIMQ){ S.afterMin=0; return; }
   S.afterMin=0; clearTimeout(afterTimer);
   clkCue(S.installed.stock?"15:00 · 收盘了 · 半小时后到晚上":"15:00 · 下课了 · 半小时后到晚上");
   if(S.app==="stock"&&S.accountOpen) renderStock(); else if(S.lapApp==="home") renderHome();
@@ -4324,7 +4348,8 @@ const loanOwed=()=>(S.loans||[]).reduce((a,l)=>a+loanDue(l),0);
 /* 压力是一天天压上来的：上限从第 1 天的 64 慢慢涨，第 17 天才到 100。
    所以崩溃一般在第 17 天以后；只有一次爆仓（强平或穿仓）亏掉 10 万以上，上限才会提前打开。 */
 const BREAK_DAY=17, BIG_BURN=100000;
-const canBreak=()=>(levNow()>=5&&loanOwed()>0)||!!S.bigBurn;
+const brokeDebt=()=>(S.liqCount||0)>=2&&loanOwed()>0;   // 被强平过两次以上，还欠着秒借
+const canBreak=()=>(levNow()>=5&&loanOwed()>0)||!!S.bigBurn||brokeDebt();
 const stressRamp=()=>(S.bigBurn||S.day>=BREAK_DAY)?100:Math.min(100,62+2.2*S.day);
 const stressCap=()=>Math.min(canBreak()?100:94, stressRamp());
 function bigBurnCheck(){
@@ -4760,7 +4785,7 @@ function showReport(){
     ${H.map((x,i)=>(i%5===0||i===n-1)?`<text x="${sx(i)}" y="${Hh-6}" font-size="9" text-anchor="middle" fill="#7d7887">${x.d}</text>`:"").join("")}
   </svg>`;
   const repHtml=`
-    <div class="hd"><div class="eyebrow" style="color:#a9a4b5">复盘报告</div><h2>屏幕使用时间</h2><div class="small" style="color:#a9a4b5">${n} 个交易日 · 只呈现，不评判</div></div>
+    <div class="hd"><div class="eyebrow" style="color:#a9a4b5">复盘报告</div><h2>屏幕使用时间</h2><div class="small" style="color:#a9a4b5">${n} 个交易日 · 只呈现，不评判${S.tested?" · 这一局用过快速测试通道":""}</div></div>
     <div class="rgrid">${albumSection()}
     <section><h4>上课时间，你的注意力去了哪里</h4>
       ${apps.map(([nm,k,c])=>`<div class="row"><span>${nm}</span><span class="bar"><i style="width:${S.appTime[k]/totalMin*100}%;background:${c}"></i></span><span class="num">${hrs(S.appTime[k])} h</span></div>`).join("")}
@@ -4946,7 +4971,8 @@ function renderGear(){
       <div class="small">用电脑的时候，手机</div>${ch("tuck",[["on","收到右边缘"],["off","一直显示"]])}
       <div class="small" style="line-height:1.6">人物右边、手机左边的竖条可以拖动调宽度，双击恢复。双击窗外或人物画面可以放大到全屏。</div>
       <button type="button" class="gbtn" id="layReset">恢复默认布局</button></div>
-    <div class="g-sec"><div class="g-t">存档</div><div class="small">已经玩过 ${META.runs} 局。周目记录只存在这台电脑的浏览器里。</div><button type="button" class="gbtn" id="metaReset">清除周目记录（回到一周目）</button></div>`;
+    <div class="g-sec"><div class="g-t">存档</div><div class="small">已经玩过 ${META.runs} 局。周目记录只存在这台电脑的浏览器里。</div><button type="button" class="gbtn" id="metaReset">清除周目记录（回到一周目）</button></div>
+    <div class="g-sec"><div class="g-t">测试</div><div class="small">开发用的快速测试通道：快进天数、加钱、开杠杆、改行情、改压力、直接看结局。网址后面加 ?test 也能直接打开。</div><button type="button" class="gbtn" id="tpOpenBtn">打开快速测试通道</button></div>`;
   p.querySelectorAll("[data-pk]").forEach(b=>b.onclick=()=>{ PREF[b.dataset.pk]=b.dataset.pv; savePref(); if(b.dataset.pk==="bg") bdKey=""; if(b.dataset.pk==="tuck") applyLayout(); renderGear(); });
   p.querySelectorAll("[data-sl]").forEach(r=>r.oninput=()=>{ PREF[r.dataset.sl]=r.value/100; r.nextElementSibling.textContent=r.value; if(r.dataset.sl==="vol"&&PREF.snd==="off"&&+r.value>0){ PREF.snd="on"; $("#gMute").checked=false; } savePref(); auApply(); });
   p.querySelectorAll("[data-sl]").forEach(r=>r.onchange=()=>{ if(r.dataset.sl==="sfxVol") sfx("notify"); });
@@ -4956,7 +4982,179 @@ function renderGear(){
   $("#layReset").onclick=()=>{ PREF.lw=null; PREF.pw=null; PREF.tuck="on"; savePref(); applyLayout(); renderGear(); };
   $("#metaReset").onclick=()=>{ Object.assign(META,{runs:0,seenMomPhone:false,bought:0,endings:[],sawWhatIf:false,momPhoneUnlock:false}); saveMeta(); toast("周目记录已清除。下一局从一周目开始。"); renderGear(); };
   $("#gClose").onclick=()=>{ p.hidden=true; p.classList.remove("center"); $("#gear").setAttribute("aria-expanded","false"); };
+  $("#tpOpenBtn").onclick=()=>{ $("#gClose").click(); tpOpen(); };
 }
+
+/* ============ 快速测试通道（开发用） ============
+   不改游戏规则，只是替你把时间、钱、杠杆、行情、压力拨到想测的位置。用过的那一局，复盘报告里会注明。 */
+let tpTimer=null, TP_SIM="";
+const TP_PH={intro:"开场",prologue:"开学前夜",lock:"早上锁屏",pre:"盘前",auction:"集合竞价",market:"盘中",after:"收盘后",evening:"晚上",report:"结局",focus:"专注路线",focusEnd:"结局",sim:"快进中"};
+function tpOpen(){ let p=$("#tpanel"); if(!p){ p=document.createElement("div"); p.id="tpanel"; p.className="tpanel"; p.setAttribute("role","dialog"); p.setAttribute("aria-label","快速测试通道"); document.body.appendChild(p); }
+  p.hidden=false; tpRender(); clearInterval(tpTimer); tpTimer=setInterval(tpLive,400); }
+function tpClose(){ const p=$("#tpanel"); if(p) p.hidden=true; clearInterval(tpTimer); }
+function tpInfo(){
+  if(!S) return "";
+  const cap=stressCap(), wg=waterGap(), lv=levNow(), pv=posValue();
+  return `第 <b>${S.day}</b> 天 · ${TP_PH[S.phase]||S.phase} · ${$("#sb-time").textContent}${S.tested?" · <span style=\"color:#f2b544\">本局用过测试</span>":""}<br>
+    压力 <b>${S.stress.toFixed(1)}</b> / 上限 ${cap.toFixed(1)}（${canBreak()?"可以崩溃":"最高 94"}）<br>
+    其中炒股攒的 ${(S.stkSt||0).toFixed(1)} · 离平仓线太近 ${(S.proxSt||0).toFixed(1)}<br>
+    ${wg>=0?"水上":"水下"} ${fmt(wg)} · 账户 ${fmt(equity())} · 借的 ${fmt(borrowedAll())}<br>
+    杠杆：${lv>1?`${lv} 倍${S.pz?"配资":"融资"} · 实际 ${curLev().toFixed(1)} 倍${pv>0?` · 再跌 ${(Math.max(0,liqRoom())*100).toFixed(1)}% 碰线`:""}`:"没开"}${S.liqPending?" · 强平挂起中":""}<br>
+    强平 ${S.liqCount||0} 次${S.chuancang?` · 穿仓 ${S.chuancang} 次`:""}${S.bigBurn?` · 第 ${S.bigBurn} 天大爆仓`:""} · 网贷欠 ${fmt(loanOwed())}<br>
+    持仓 ${Object.keys(S.hold).length} 只 · 连续专注 ${S.streak||0} 天`; }
+function tpLive(){ const e=$("#tpInfo"); if(e){ const h=tpInfo(); if(e.innerHTML!==h) e.innerHTML=h; } }
+function tpRender(){
+  const p=$("#tpanel"); if(!p) return; const sp=S&&S.testSpd||1;
+  p.innerHTML=`<div class="tp-h"><b>快速测试通道</b><button type="button" class="tp-x" id="tpX" aria-label="关闭">×</button></div>
+    <div class="tp-info" id="tpInfo"></div>
+    <div class="tp-sec"><div class="tp-t">时间</div>
+      <div class="tp-row"><button class="tbtn" data-t="open" type="button">跳到 9:30 开盘</button><button class="tbtn" data-t="close" type="button">快进到收盘</button><button class="tbtn" data-t="days" data-v="1" type="button">过完今天</button></div>
+      <div class="tp-row"><button class="tbtn" data-t="days" data-v="3" type="button">再过 3 天</button><button class="tbtn" data-t="to" data-v="12" type="button">到第 12 天</button><button class="tbtn" data-t="to" data-v="17" type="button">到第 17 天</button><button class="tbtn" data-t="to" data-v="20" type="button">到第 20 天</button></div>
+      <div class="tp-row">时间流速 ${[1,3,10].map(v=>`<button class="tbtn ${sp===v?"on":""}" data-t="spd" data-v="${v}" type="button">×${v}</button>`).join("")}</div>
+      <div class="tp-note">快进的日子不炒股、不学习、晚上直接睡觉；持仓跟着行情走（快进时也会强平）。</div></div>
+    <div class="tp-sec"><div class="tp-t">钱和杠杆</div>
+      <div class="tp-row"><button class="tbtn" data-t="cash" type="button">本金 +¥10,000</button><button class="tbtn" data-t="loan" type="button">借网贷 ¥10,000</button><button class="tbtn" data-t="liq" type="button">强平次数 +1</button></div>
+      <div class="tp-row"><button class="tbtn" data-t="pz" data-v="5" type="button">开 5 倍配资</button><button class="tbtn" data-t="pz" data-v="10" type="button">开 10 倍配资</button><button class="tbtn" data-t="buy" type="button">满仓买入（盘中）</button></div></div>
+    <div class="tp-sec"><div class="tp-t">行情（只动持仓的股票，盘中）</div>
+      <div class="tp-row"><button class="tbtn" data-t="mv" data-v="dn5" type="button">跌 5%</button><button class="tbtn" data-t="mv" data-v="up5" type="button">涨 5%</button><button class="tbtn" data-t="mv" data-v="limdn" type="button">跌停封死</button><button class="tbtn" data-t="mv" data-v="limup" type="button">涨停</button></div></div>
+    <div class="tp-sec"><div class="tp-t">压力</div>
+      <div class="tp-row"><input type="range" min="0" max="100" value="${Math.round(S?S.stress:0)}" id="tpSt" aria-label="压力"><b id="tpStV">${Math.round(S?S.stress:0)}</b><button class="tbtn" data-t="st" type="button">设为</button></div>
+      <div class="tp-note">设得比上限高，下一分钟会被压回上限。</div></div>
+    <div class="tp-sec"><div class="tp-t">数值模拟（后台跑完整局）</div>
+      <div class="tp-row">${Object.entries(SIM_STRATS).map(([k,o])=>`<button class="tbtn" data-t="sim" data-v="${k}" type="button">${o.name} ×20</button>`).join("")}<button class="tbtn" data-t="sim" data-v="all" type="button">三种各 20 局</button></div>
+      <div class="tp-note" id="tpSim">${TP_SIM||"用游戏自己的规则，按一种玩法在后台跑完 20 天，不影响你正在玩的这一局。要在早上锁屏、开场或结局画面时才能跑。"}</div></div>
+    <div class="tp-sec"><div class="tp-t">结局</div>
+      <div class="tp-row"><button class="tbtn" data-t="end" type="button">现在结算，看结局</button><button class="tbtn" data-t="collapse" type="button">直接触发崩溃</button></div></div>`;
+  $("#tpX").onclick=tpClose;
+  const r=$("#tpSt"); r.oninput=()=>{ $("#tpStV").textContent=r.value; };
+  p.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>tpDo(b.dataset.t,b.dataset.v));
+  tpLive(); }
+/* ============ 快速整局模拟（开发用） ============
+   用游戏自己的规则（行情、强平、压力、事件），按一种玩法在后台一口气跑完 20 天：不等动画、不弹提示，
+   跑完把你正在玩的这一局原样放回来。随机数可以固定种子，同一个种子每次结果一样。 */
+function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+const SIM_STRATS={
+  steady:{name:"稳健：不加杠杆", watch:0.3, buyF:0.5, tp:0.06, sl:-0.05, hold:3},
+  margin:{name:"融资 2 倍", watch:0.6, buyF:1, tp:0.08, sl:-0.06, hold:3, margin:true},
+  gambler:{name:"10 倍配资 + 网贷", watch:1, buyF:1, tp:0.10, sl:-1, hold:5, pz:10, loans:true},
+};
+function simPick(){
+  const bp=buyingPower(), ok=S.stocks.filter(s=>!s.delisted&&!isLimUp(s)&&!isLimDn(s)&&s.price*100*1.002<=bp); if(!ok.length) return null;
+  const w=ok.filter(s=>S.watch.includes(s.theme)), pool=w.length&&Math.random()<0.6?w:ok; return pool[Math.floor(Math.random()*pool.length)]; }
+function simMorning(st){
+  if(st.margin&&S.day>=3&&!S.leverage){ S.leverage=true; S.creditLine=Math.max(0,equity()); }
+  if(st.loans&&S.day>=2){   // 水下就借，借满两万为止；逾期了借不到
+    const act=S.loans.filter(l=>!l.paid), od=act.some(l=>S.day>l.due), room=LOAN_LIMIT-act.reduce((a,l)=>a+l.amt,0);
+    if(!od&&waterGap()<0&&room>=5000){ const a=room>=10000?10000:5000, get=Math.round(a*(1-LOAN_FEE)); S.installed.loan=true;
+      S.loans.push({id:"L"+S.day+"_"+S.loans.length,amt:a,d:S.day,due:S.day+LOAN_DAYS,paid:false}); S.cash+=get; S.loanFees+=a-get; S.openEquity+=get; stkAdd(3*stressAmp()); } }
+  if(st.pz&&S.day>=2&&!S.pz&&!S.liqPending&&equity()>=1000){   // 被平了就再签
+    S.installed.pz=true; if(S.pzBurned) S.pzResign=(S.pzResign||0)+1;
+    S.pz={lev:st.pz,rate:PZ_OPTS.find(x=>x.lev===st.pz).rate,d:S.day}; S.creditLine=Math.max(0,equity())*(st.pz-1); stkAdd(4*stressAmp()); } }
+function simMinute(st){
+  const m=S.minute;
+  if(m%30===0) S.app=Math.random()<st.watch?"stock":"study";   // 每半小时决定一次：盯盘还是专注
+  if(m===5&&!Object.keys(S.hold).length){ const s=simPick(); if(s){ S.sel=s.code; trade("buy",st.buyF); S.simBuy=S.simBuy||{}; S.simBuy[s.code]=S.day; } }
+  if(m%15===10) Object.entries(S.hold).forEach(([c,h])=>{ if(h.qty-(h.todayQty||0)<=0) return; const s=stock(c), r=s.price/h.cost-1, held=S.day-((S.simBuy||{})[c]||S.day);
+    if(r>=st.tp||r<=st.sl||held>=st.hold){ S.sel=c; trade("sell",1); } }); }
+function simDay(st){
+  simMorning(st);
+  S.phase="auction"; S.aucMin=10; endAuction(); S.app="stock";
+  while(S.phase==="market"&&S.minute<MINUTES){
+    simMinute(st); tickMinute();
+    if(S.paused){ S.paused=false; S.stress=Math.max(0,S.stress-6); S.refocusLeft=90; }   // 当场崩溃：趴在桌上，等它过去
+  }
+  S.phase="evening"; S.dayFocus[S.day]=S.todayStudy;
+  if(S.stress>=100){ S.collapsed=true; return true; }
+  if(S.day>=DAYS) return true;
+  const ev=pickEvent(); if(ev){ const ch=ev.choices[Math.floor(Math.random()*ev.choices.length)][0]; ev.fx(ch); S.stress=Math.max(0,Math.min(stressCap(),S.stress)); }
+  const fc=eveCtx().fc; if(st.pz&&Math.random()<0.5){ S.stress=Math.max(0,S.stress-4*fc); } else S.stress=Math.max(0,S.stress-9*fc);   // 晚上：早睡，赌徒一半时间熬夜刷手机
+  const tr=stressTier(); S.insomnia=false; if(tr>=2&&Math.random()<(tr===3?0.75:0.35)+(S.stress-60)/200){ S.tired=true; S.insomnia=true; }
+  S.day++; startDay(); return false; }
+function simOne(key,seed){
+  const st=SIM_STRATS[key], R0=Math.random, T0=window.setTimeout, I0=window.setInterval, A0=window.requestAnimationFrame, S0=S, tm0=timer;
+  Math.random=mulberry32(seed); window.setTimeout=()=>0; window.setInterval=()=>0; window.requestAnimationFrame=()=>0; SIMQ=true;
+  try{
+    newGame(); S.sim=true; S.lean="stock"; Object.assign(S.installed,{stock:true,news:true,comm:true}); S.accountOpen=true; S.app="stock"; S.lapApp=null; S.skipClose=true;
+    startDay();
+    const curve=[]; let g=0;
+    while(g++<40){ const done=simDay(st); curve.push(Math.round(S.stress)); if(done) break; }
+    const net=netWorth();
+    return {key,seed,end:S.collapsed?"collapse":endKind(net/S.start-1),day:S.day,collapseDay:S.collapsed?S.day:null,liq:S.liqCount||0,bigBurn:S.bigBurn||null,
+      brokeDebt:brokeDebt(),net:Math.round(net),start:S.start,neg:net<0,owe:Math.round(borrowedAll()),curve,maxSt:Math.max(...curve)};
+  } finally { S=S0; timer=tm0; Math.random=R0; window.setTimeout=T0; window.setInterval=I0; window.requestAnimationFrame=A0; SIMQ=false; }
+}
+function simSummary(key,res){
+  const n=res.length, cnt=k=>res.filter(r=>r.end===k).length, cd=res.filter(r=>r.collapseDay).map(r=>r.collapseDay).sort((a,b)=>a-b);
+  const nets=res.map(r=>r.net).sort((a,b)=>a-b), med=a=>a.length?a[Math.floor((a.length-1)/2)]:null, avg=[];
+  for(let d=0;d<DAYS;d++){ const v=res.filter(r=>r.curve.length>d).map(r=>r.curve[d]); avg.push(v.length?+(v.reduce((a,b)=>a+b,0)/v.length).toFixed(1):null); }
+  return {key,name:SIM_STRATS[key].name,n,ends:{win:cnt("win"),flat:cnt("flat"),loss:cnt("loss"),collapse:cnt("collapse")},collapseDays:cd,
+    early:cd.filter(d=>d<BREAK_DAY).length, earlyBig:res.filter(r=>r.collapseDay&&r.collapseDay<BREAK_DAY&&r.bigBurn).length,
+    liqAvg:+(res.reduce((a,r)=>a+r.liq,0)/n).toFixed(1), negN:res.filter(r=>r.neg).length, netMed:med(nets), start:res[0]&&res[0].start, avgCurve:avg, res}; }
+async function runSims(key,n,seed0,onProg){
+  const res=[]; for(let i=0;i<n;i++){ res.push(simOne(key,(seed0||1)+i*7919)); if(onProg) onProg(i+1,n); await new Promise(r=>setTimeout(r,0)); }
+  return simSummary(key,res); }
+window.ssdsySim={runSims,simOne,simSummary,strats:SIM_STRATS};
+function simLine(sm){ const e=sm.ends, cd=sm.collapseDays;
+  return `<b>${sm.name}</b> · ${sm.n} 局：赚 ${e.win} · 持平 ${e.flat} · 亏 ${e.loss} · 崩溃 ${e.collapse}${cd.length?`（最早第 ${cd[0]} 天，中位第 ${cd[Math.floor((cd.length-1)/2)]} 天；第 17 天前 ${sm.early} 局${sm.early?`，其中大爆仓 ${sm.earlyBig} 局`:""}）`:""}<br>平均被强平 ${sm.liqAvg} 次 · 穿仓 ${sm.negN} 局 · 扣掉借款后净资产中位数 ${fmt(sm.netMed)}`; }
+function tpDo(t,v){
+  if(t==="sim"){ tpSim(v); return; }
+  if(!S||["intro","prologue"].includes(S.phase)){ toast("先开始游戏，进到第一天早上再用"); return; }
+  if(typeof VN!=="undefined"&&VN.on&&!["spd","cash","loan","liq","pz","st"].includes(t)){ toast("先把对话看完"); return; }
+  S.tested=true;
+  try{ TP_ACT[t](v); }catch(e){ console.error(e); toast("测试操作没成功："+e.message); }
+  updateChrome(); if(S.app==="stock"&&S.accountOpen&&DAYPH.includes(S.phase)) renderStock(); tpRender(); }
+function tpToOpen(){
+  let did=false;
+  if(S.phase==="lock"){ startPre(); openApp("home"); did=true; }
+  if(S.phase==="pre"){ clearTimeout(preTimer); S.preMin=63; startAuction(); did=true; }
+  if(S.phase==="auction"){ clearTimeout(aucTimer); aucTimer=null; S.aucMin=10; endAuction(); did=true; }
+  if(!did) toast("现在不是早上");
+  return did; }
+function tpToClose(){
+  if(S.phase!=="market"){ toast("现在不在盘中"); return false; }
+  S.paused=false; S.frozen=false; closeSheet(); S.skipClose=true;
+  try{ while(S.phase==="market"&&S.minute<MINUTES){ S.paused=false; tickMinute(); } } finally { S.skipClose=false; }
+  closeSheet(); S.paused=false; return true; }
+function tpFinishDay(){   // 过完今天：到收盘、跳过晚上、直接睡觉，进到明天早上
+  if(typeof VN!=="undefined"&&VN.on) return false;
+  if(["lock","pre","auction"].includes(S.phase)) tpToOpen();
+  if(S.phase==="market") tpToClose();
+  if(S.phase==="after"){ clearTimeout(afterTimer); closeSheet(); S.phase="evening"; S.app="evening"; S.dayFocus[S.day]=S.todayStudy; }
+  if(S.phase==="evening"){ closeSheet(); clearTimeout(eveTimer); $("#ov").classList.remove("show");
+    if(S.stress>=100){ S.collapsed=true; showReport(); return false; }
+    if(S.day>=DAYS){ showReport(); return false; }
+    S.stress=Math.max(0,S.stress-9*eveCtx().fc); S.eveAct="sleep"; nextDay(); return true; }
+  toast("现在这个阶段不能快进"); return false; }
+let tpSimBusy=false;
+async function tpSim(v){
+  if(tpSimBusy) return;
+  if(!S||!["intro","lock","report","focusEnd"].includes(S.phase)||(typeof VN!=="undefined"&&VN.on)){ toast("回到早上锁屏、开场或结局画面再模拟，免得打断正在进行的这一天"); return; }
+  tpSimBusy=true; const keys=v==="all"?Object.keys(SIM_STRATS):[v], out=[];
+  try{ for(const k of keys){ const sm=await runSims(k,20,1,(i,n)=>{ const e=$("#tpSim"); if(e) e.textContent=`${SIM_STRATS[k].name}：第 ${i}/${n} 局……`; }); out.push(simLine(sm)); }
+    TP_SIM=out.join("<br><br>"); }
+  catch(e){ console.error(e); TP_SIM="模拟出错："+e.message; }
+  finally{ tpSimBusy=false; updateChrome(); tpRender(); } }
+async function tpDays(n){ for(let i=0;i<n;i++){ if(!tpFinishDay()) break; await new Promise(r=>setTimeout(r,20)); } tpRender(); }
+const TP_ACT={
+  open:()=>tpToOpen(),
+  close:()=>tpToClose(),
+  days:v=>{ tpDays(+v); },
+  to:v=>{ const n=+v-S.day; if(n<=0){ toast(`已经是第 ${S.day} 天了`); return; } tpDays(n); },
+  spd:v=>{ S.testSpd=+v; toast(`时间流速 ×${v}`); },
+  cash:()=>{ S.cash+=10000; S.start+=10000; S.openEquity+=10000; toast("本金 +¥10,000（算进本金，不算赚的）"); },
+  loan:()=>{ S.installed.loan=true; const a=10000, get=Math.round(a*(1-LOAN_FEE)); S.loans.push({id:"L"+S.day+"_"+S.loans.length,amt:a,d:S.day,due:S.day+LOAN_DAYS,paid:false}); S.cash+=get; S.loanFees+=a-get; S.openEquity+=get; toast(`借了 ¥10,000，到手 ${fmt(get)}`); },
+  liq:()=>{ S.liqCount=(S.liqCount||0)+1; toast(`强平次数：${S.liqCount}`); },
+  pz:v=>{ const lev=+v, eq=Math.max(0,equity()); if(eq<1000){ toast("账户不到 ¥1,000，签不了配资"); return; } S.installed.pz=true; S.installed.stock=true; S.pz={lev,rate:PZ_OPTS.find(x=>x.lev===lev).rate,d:S.day}; S.creditLine=eq*(lev-1); S.liqPending=false; S.liqSold=false; toast(`开了 ${lev} 倍配资，额度 ${fmt(S.creditLine)}`); },
+  buy:()=>{ if(S.phase!=="market"){ toast("盘中才能买"); return; } S.installed.stock=true; S.accountOpen=true;
+    const cur=S.sel&&stock(S.sel), ok=s=>s&&!s.delisted&&!isLimUp(s); if(!ok(cur)) S.sel=(S.stocks.find(ok)||{}).code; trade("buy",1); },
+  mv:v=>{ if(S.phase!=="market"){ toast("盘中才能改行情"); return; } const codes=Object.keys(S.hold); if(!codes.length){ toast("没有持仓"); return; }
+    codes.forEach(c=>{ const s=stock(c), lo=s.prev*0.8, hi=s.prev*1.2, px=v==="dn5"?s.price*0.95:v==="up5"?s.price*1.05:v==="limdn"?lo:hi;
+      for(let i=S.minute+1;i<s.path.length;i++) s.path[i]=Math.max(lo,Math.min(hi,px)); });
+    toast(`持仓的股票下一分钟起：${{dn5:"跌 5%",up5:"涨 5%",limdn:"跌停封死",limup:"涨停"}[v]}`); },
+  st:()=>{ const v=+$("#tpSt").value; S.stress=v; S._stLast=v; toast(`压力设为 ${v}`); },
+  end:()=>{ closeSheet(); $("#ov").classList.remove("show"); clearTimeout(preTimer); clearTimeout(aucTimer); clearTimeout(afterTimer); clearTimeout(eveTimer); if(S.phase==="market") S.phase="after"; showReport(); },
+  collapse:()=>{ closeSheet(); $("#ov").classList.remove("show"); clearTimeout(preTimer); clearTimeout(aucTimer); clearTimeout(afterTimer); clearTimeout(eveTimer); if(S.phase==="market") S.phase="after"; S.stress=100; S.collapsed=true; showReport(); },
+};
 
 /* ============ 美术资源：demo_art.js 里有图就用图，没有就用下面代码画的占位美术 ============ */
 const ART={};
@@ -6253,6 +6451,7 @@ addEventListener("keydown",e=>{ if(e.key==="Escape"&&FSV) closeFsv(); });
 $("#muteBtn").onclick=e=>{ e.stopPropagation(); auInit(); PREF.snd=PREF.snd==="off"?"on":"off"; savePref(); auApply(); muteIcon(); if(!$("#gpanel").hidden) renderGear(); };
 muteIcon();
 $("#gear").onclick=()=>{ $("#gpanel").classList.remove("center"); const p=$("#gpanel"), open=p.hidden; p.hidden=!open; $("#gear").setAttribute("aria-expanded",String(open)); if(open) renderGear(); };
+if(/(^|[?&#])test(\b|=)/.test(location.search+location.hash)) setTimeout(tpOpen,300);   // 网址带 ?test：自动打开快速测试通道
 newGame(); renderIntro();
 document.addEventListener("visibilitychange",()=>{ if(document.hidden && S.phase==="market"){ last=0; }});
 })();

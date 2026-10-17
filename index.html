@@ -160,6 +160,54 @@ td.sc{font-family:var(--f-mono);white-space:nowrap}
 @media (max-width:860px){.ends{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:520px){.ends{grid-template-columns:1fr}}
 footer{padding-block:30px 46px;color:var(--muted);font-size:12.5px}
+
+/* ---- 测试与数值验证 ---- */
+.viz-root{--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--e-win:#d23a43;--e-flat:#9a94a6;--e-loss:#1d8a53;--e-col:#6250d6;--on-mark:#ffffff;--on-flat:#211c2b;--vgrid:#ebe6f1;--vaxis:#8a8297}
+@media (prefers-color-scheme: dark){ :root:where(:not([data-theme="light"])) .viz-root{--s1:#3987e5;--s2:#d95926;--s3:#199e70;--e-win:#ff5a62;--e-flat:#8f889e;--e-loss:#3fd08a;--e-col:#9085e9;--on-mark:#14111b;--on-flat:#14111b;--vgrid:#2b2438;--vaxis:#8f87a3} }
+:root[data-theme="dark"] .viz-root{--s1:#3987e5;--s2:#d95926;--s3:#199e70;--e-win:#ff5a62;--e-flat:#8f889e;--e-loss:#3fd08a;--e-col:#9085e9;--on-mark:#14111b;--on-flat:#14111b;--vgrid:#2b2438;--vaxis:#8f87a3}
+.vtiles{margin-bottom:18px}
+.vtiles .stat .v{font-size:26px}
+.vgrid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:18px 28px;align-items:start}
+.vtext{display:grid;gap:8px;padding-top:4px}
+.vtext h3{font-size:17px}
+.vtext p,.vtext li{font-size:14.5px;line-height:1.7}
+.vtext ul{margin:0;padding-left:1.2em;display:grid;gap:4px}
+.vcharts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:22px}
+.vchart{background:var(--sheet);border:1px solid var(--line);border-radius:12px;padding:14px 16px 12px;display:grid;gap:10px;align-content:start;min-width:0}
+.vc-t{font-size:13px;color:var(--muted)}
+.vc-t b{display:block;font-size:15px;color:var(--ink);margin-bottom:2px}
+.vc-legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--muted)}
+.vc-legend span{display:inline-flex;align-items:center;gap:6px}
+.vc-legend i{width:11px;height:11px;border-radius:3px;display:inline-block}
+.vc-legend i.ln{width:16px;height:2px;border-radius:2px}
+.vc-legend i.ln.dash{background:repeating-linear-gradient(90deg,var(--vaxis) 0 4px,transparent 4px 7px)}
+.vbars{display:grid;gap:14px;padding:4px 0 6px}
+.vbar-row{display:grid;grid-template-columns:7.5em minmax(0,1fr);gap:10px;align-items:center}
+.vbar-l{font-size:13px;color:var(--ink)}
+.vbar{display:flex;gap:2px;height:26px;border-radius:4px;overflow:hidden}
+.vbar .seg{display:flex;align-items:center;justify-content:center;font:600 12px/1 var(--f-mono);color:var(--on-mark);min-width:2px}
+.vbar .seg.dk{color:var(--on-flat)}
+.vchart svg{width:100%;height:auto;display:block;overflow:visible}
+.vchart .vg{stroke:var(--vgrid);stroke-width:1}
+.vchart .vd{stroke:var(--vgrid);stroke-width:1.5;stroke-dasharray:3 3}
+.vchart .vt{fill:var(--muted);font:12px var(--f-body)}
+.vchart .vlab{fill:var(--ink);font:600 12.5px var(--f-body)}
+.vchart .vramp{fill:none;stroke:var(--vaxis);stroke-width:1.5;stroke-dasharray:5 4}
+.vchart .vl{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.vchart .vm{stroke:var(--sheet);stroke-width:2}
+.vchart .vhit{fill:transparent;cursor:default}
+.vchart .vhit:hover{fill:var(--vgrid)}
+.vfind{margin-top:22px}
+.vtab{margin-top:14px;font-size:13.5px}
+.vtab summary{cursor:pointer;color:var(--muted)}
+.vtab summary:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+.vtab-in{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:10px;overflow-x:auto}
+.vtab table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+.vtab caption{text-align:left;color:var(--muted);padding-bottom:6px}
+.vtab th,.vtab td{border-bottom:1px solid var(--line);padding:4px 8px;text-align:right}
+.vtab th:first-child,.vtab td:first-child{text-align:left}
+@media (max-width:860px){ .vgrid,.vcharts,.vtab-in{grid-template-columns:1fr} }
+@media (max-width:560px){ .vchart .vt{font-size:17px} .vchart .vlab{font-size:17px} }
 </style>
 
 <div class="tape" aria-label="项目数据">
@@ -183,6 +231,7 @@ footer{padding-block:30px 46px;color:var(--muted);font-size:12.5px}
         <a class="btn go" href="play.html">开始试玩 <small>15 分钟起</small></a>
         <a class="btn" href="#resume">项目描述</a>
         <a class="btn" href="#ai">我怎么用 AI 做它</a>
+        <a class="btn" href="#verify">数值怎么验证</a>
       </div>
       <p class="who">策划与制作：本人　·　程序、文案与美术提示词：Claude　·　美术：AI 图像模型　·　2026 年 10 月</p>
     </div>
@@ -278,7 +327,7 @@ footer{padding-block:30px 46px;color:var(--muted);font-size:12.5px}
       <article><h3>先建模型，再写代码</h3><p>灵感先进库、打分、算化学反应，再决定做什么。后来加的「附近好店」「借贷与配资」，也先问同一个问题：<em>它服务「反赌博」这个主题吗？</em>刺激可以加，代价必须跟着来。</p></article>
       <article><h3>把主题写进数值</h3><p>每一种刺激都有对应的代价：浮动金额按生活费换算；赚钱不加压力，赚过又亏回去涨得最快；亏钱的压力看杠杆，不加杠杆顶多停在「紧绷」；回到本金以上，这一轮攒下的压力立刻清空；借钱炒股，离平仓线越近越难受，跌停卖不掉还会穿仓；借来的钱不算收益；压力分四段，影响学习和睡眠；<em>只有五倍以上配资再背着借款，压力才会爆。</em></p></article>
       <article><h3>像带团队一样分工</h3><p>Claude 写程序、文案和美术提示词，图像模型出图，我做判断。<em>每次先拿到美术提示词，生图和写代码同时进行</em>，最后一批 99 张新图一次性接进游戏。</p></article>
-      <article><h3>用自动化测试守住速度</h3><p>每一版发布前，用浏览器自动化把整局跑一遍：专注线、随机炒股线、十倍杠杆借贷线，确认没有报错、结局都能走到。<em>两天内迭代 27 个版本</em>，每一版都确认能从开局玩到结局。</p></article>
+      <article><h3>用自动化测试守住速度</h3><p>每一版发布前，用浏览器自动化把整局跑一遍：专注线、随机炒股线、十倍杠杆借贷线，确认没有报错、结局都能走到。<em>两天内迭代 27 个版本</em>，每一版都确认能从开局玩到结局。后来又做了快速测试通道和整局模拟，见下方「测试与数值验证」。</p></article>
       <article><h3>试玩反馈直接落到机制</h3><p>「竞价时今日盈亏以开盘价为 0 轴」「压力太容易降」「换了发型日常立绘不变」——每条反馈都定位到具体的规则或数据，改完再跑一遍整局。</p></article>
       <article><h3>美术也有工程</h3><p>259 张图保持同一个人：角色设定图做参考，绿幕统一出图，脚本抠图、量化调色、生成换色遮罩，图片包按需加载。<em>人工只负责生成和挑图。</em></p></article>
     </div>
@@ -286,8 +335,8 @@ footer{padding-block:30px 46px;color:var(--muted);font-size:12.5px}
 
   <section id="numbers">
     <div class="stats">
-      <div class="stat"><span class="v">6,000</span><span class="k">行，单文件网页，不依赖框架</span></div>
-      <div class="stat"><span class="v">391</span><span class="k">个函数</span></div>
+      <div class="stat"><span class="v">6,400</span><span class="k">行，单文件网页，不依赖框架</span></div>
+      <div class="stat"><span class="v">430</span><span class="k">个函数</span></div>
       <div class="stat"><span class="v up">259</span><span class="k">张 AI 美术</span></div>
       <div class="stat"><span class="v">53</span><span class="k">段多轮对话</span></div>
       <div class="stat"><span class="v">20</span><span class="k">个交易日</span></div>
@@ -316,10 +365,48 @@ footer{padding-block:30px 46px;color:var(--muted);font-size:12.5px}
         <p class="if"><b>怎么走到：</b>第二十天，扣掉借来的钱，账户比开局跌了 3% 以上。</p>
         <blockquote>你在想，如果再给你一次机会，你一定能赢回来。</blockquote></article>
       <article class="end crash"><span class="tag">炒股 · 提前结束</span><h3>崩溃</h3>
-        <p class="if"><b>怎么走到：</b>开着 5 倍以上配资、又欠着网贷，压力涨到 100。压力是一天天压上来的，一般要到第 17 天以后；只有一次爆仓亏掉 10 万以上，才会提前走到这里。不加杠杆、不借钱，压力最高停在 94。</p>
+        <p class="if"><b>怎么走到：</b>开着 5 倍以上配资、又欠着网贷，压力涨到 100。压力是一天天压上来的，一般要到第 17 天以后；只有一次爆仓亏掉 10 万以上，才会提前走到这里。被强平两次以上、还欠着网贷，就算已经不开杠杆，后期也会被压垮。不加杠杆、不借钱，压力最高停在 94。</p>
         <blockquote>醒来的时候，第一件事是摸手机看盘。</blockquote></article>
     </div>
     <p class="ends-note">每一种结局之后都是同一份复盘报告：屏幕使用时间、周期真相图，以及「如果这些钱用在别的地方」。</p>
+  </section>
+
+  <section id="verify">
+    <div class="sec-h"><h2>测试与数值验证</h2><p>数值调得对不对，不靠感觉。先在游戏里做了快速测试通道，再用游戏自己的规则在后台批量跑完整局，看统计结果和设计目标对不对得上。</p></div>
+    <div class="stats vtiles">
+      <div class="stat"><span class="v">2 秒</span><span class="k">从第 1 天快进到第 17 天</span></div>
+      <div class="stat"><span class="v">53 秒</span><span class="k">三种玩法各跑 50 局完整游戏（以前一局自动通关要 15～25 分钟）</span></div>
+      <div class="stat"><span class="v up">47/50</span><span class="k">10 倍配资 + 网贷的局走到压力崩溃</span></div>
+      <div class="stat"><span class="v">0</span><span class="k">局在第 17 天之前崩溃</span></div>
+    </div>
+    <div class="vgrid">
+      <figure><button type="button" data-big="shots/testpanel.jpg"><div class="shot"><img src="shots/testpanel.jpg" alt="游戏里的快速测试通道：左边是实时读数和快进按钮，右边是三种玩法各 20 局的模拟结果" loading="lazy" width="1280" height="840"></div></button><figcaption><b>快速测试通道</b>在设置里打开，或者在网址后面加 ?test。快进天数、加钱、借网贷、开杠杆、改行情、改压力、直接看结局；用过的那一局，复盘报告会注明。</figcaption></figure>
+      <article class="vtext"><h3>快速整局模拟</h3>
+        <p>用游戏自己的规则（行情、强平、压力、生活事件），让程序按一种玩法在后台跑完 20 天：不等动画，固定随机种子，同一个种子每次结果一样。测试通道里也能直接点。三种玩法：</p>
+        <ul><li><b>稳健</b>：不加杠杆、半仓，七成时间在学习</li><li><b>融资 2 倍</b>：满仓，六成时间盯盘</li><li><b>10 倍配资 + 网贷</b>：亏了就借，被平了就再签，整天盯盘</li></ul>
+        <p>以前调一次数值，要等一局 15～25 分钟的自动通关，还只能看一局的运气；现在几分钟就能看到几十局的分布。</p></article>
+    </div>
+    <div class="vcharts">
+      <figure class="viz-root vchart">
+        <figcaption class="vc-t"><b>结局分布</b>每种玩法 50 局</figcaption>
+        <div class="vc-legend" aria-hidden="true"><span><i style="background:var(--e-win)"></i>赚</span><span><i style="background:var(--e-flat)"></i>持平</span><span><i style="background:var(--e-loss)"></i>亏</span><span><i style="background:var(--e-col)"></i>压力崩溃</span></div>
+        <div class="vbars" role="img" aria-label="结局分布。稳健：赚 19 局、持平 19 局、亏 12 局、压力崩溃 0 局；融资 2 倍：赚 22 局、持平 3 局、亏 25 局、压力崩溃 0 局；10 倍配资 + 网贷：赚 2 局、持平 0 局、亏 1 局、压力崩溃 47 局"><div class="vbar-row"><span class="vbar-l">稳健</span><div class="vbar"><span class="seg " style="flex:19;background:var(--e-win)" title="稳健 · 赚 19 局">19</span><span class="seg dk" style="flex:19;background:var(--e-flat)" title="稳健 · 持平 19 局">19</span><span class="seg " style="flex:12;background:var(--e-loss)" title="稳健 · 亏 12 局">12</span></div></div><div class="vbar-row"><span class="vbar-l">融资 2 倍</span><div class="vbar"><span class="seg " style="flex:22;background:var(--e-win)" title="融资 2 倍 · 赚 22 局">22</span><span class="seg dk" style="flex:3;background:var(--e-flat)" title="融资 2 倍 · 持平 3 局">3</span><span class="seg " style="flex:25;background:var(--e-loss)" title="融资 2 倍 · 亏 25 局">25</span></div></div><div class="vbar-row"><span class="vbar-l">10 倍配资 + 网贷</span><div class="vbar"><span class="seg " style="flex:2;background:var(--e-win)" title="10 倍配资 + 网贷 · 赚 2 局"></span><span class="seg " style="flex:1;background:var(--e-loss)" title="10 倍配资 + 网贷 · 亏 1 局"></span><span class="seg " style="flex:47;background:var(--e-col)" title="10 倍配资 + 网贷 · 压力崩溃 47 局">47</span></div></div></div>
+      </figure>
+      <figure class="viz-root vchart">
+        <figcaption class="vc-t"><b>每天的平均压力</b>10 倍配资 + 网贷的线画到第 17 天：之后大部分局已经崩溃</figcaption>
+        <div class="vc-legend" aria-hidden="true"><span><i class="ln" style="background:var(--s1)"></i>稳健</span><span><i class="ln" style="background:var(--s2)"></i>融资 2 倍</span><span><i class="ln" style="background:var(--s3)"></i>10 倍配资 + 网贷</span><span><i class="ln dash"></i>压力上限</span></div>
+        <svg viewBox="0 0 520 300" role="img" aria-label="每天的平均压力。稳健：第 1 天 15，第 20 天 90；融资 2 倍：第 1 天 17，第 20 天 94；10 倍配资加网贷：贴着压力上限上升，第 17 天上限到 100 时崩溃。"><line x1="40" x2="430" y1="258.0" y2="258.0" class="vg"/><text x="32" y="262.0" class="vt" text-anchor="end">0</text><line x1="40" x2="430" y1="198.0" y2="198.0" class="vg"/><text x="32" y="202.0" class="vt" text-anchor="end">25</text><line x1="40" x2="430" y1="138.0" y2="138.0" class="vg"/><text x="32" y="142.0" class="vt" text-anchor="end">50</text><line x1="40" x2="430" y1="78.0" y2="78.0" class="vg"/><text x="32" y="82.0" class="vt" text-anchor="end">75</text><line x1="40" x2="430" y1="18.0" y2="18.0" class="vg"/><text x="32" y="22.0" class="vt" text-anchor="end">100</text><text x="40.0" y="278" class="vt" text-anchor="middle">1</text><text x="122.1" y="278" class="vt" text-anchor="middle">5</text><text x="224.7" y="278" class="vt" text-anchor="middle">10</text><text x="327.4" y="278" class="vt" text-anchor="middle">15</text><text x="368.4" y="278" class="vt" text-anchor="middle">17</text><text x="430.0" y="278" class="vt" text-anchor="middle">20</text><text x="430" y="296" class="vt" text-anchor="end">第几天</text><line x1="368.4" x2="368.4" y1="18" y2="258" class="vd"/><polyline points="40.0,103.9 60.5,98.6 81.1,93.4 101.6,88.1 122.1,82.8 142.6,77.5 163.2,72.2 183.7,67.0 204.2,61.7 224.7,56.4 245.3,51.1 265.8,45.8 286.3,40.6 306.8,35.3 327.4,30.0 347.9,24.7 368.4,18.0 388.9,18.0 409.5,18.0 430.0,18.0" class="vramp"/><text x="183.7" y="46.2" class="vt">压力上限</text><polyline points="40.0,221.5 60.5,232.1 81.1,240.0 101.6,244.8 122.1,245.8 142.6,244.6 163.2,241.7 183.7,236.6 204.2,228.7 224.7,217.7 245.3,203.3 265.8,181.0 286.3,171.1 306.8,159.4 327.4,144.2 347.9,128.2 368.4,108.5 388.9,88.3 409.5,66.7 430.0,43.0" class="vl" style="stroke:var(--s1)"/><circle cx="430.0" cy="43.0" r="4.5" class="vm" style="fill:var(--s1)"/><circle cx="40.0" cy="221.5" r="8" class="vhit"><title>稳健 · 第 1 天 · 平均压力 15（50 局还在进行）</title></circle><circle cx="60.5" cy="232.1" r="8" class="vhit"><title>稳健 · 第 2 天 · 平均压力 11（50 局还在进行）</title></circle><circle cx="81.1" cy="240.0" r="8" class="vhit"><title>稳健 · 第 3 天 · 平均压力 8（50 局还在进行）</title></circle><circle cx="101.6" cy="244.8" r="8" class="vhit"><title>稳健 · 第 4 天 · 平均压力 6（50 局还在进行）</title></circle><circle cx="122.1" cy="245.8" r="8" class="vhit"><title>稳健 · 第 5 天 · 平均压力 5（50 局还在进行）</title></circle><circle cx="142.6" cy="244.6" r="8" class="vhit"><title>稳健 · 第 6 天 · 平均压力 6（50 局还在进行）</title></circle><circle cx="163.2" cy="241.7" r="8" class="vhit"><title>稳健 · 第 7 天 · 平均压力 7（50 局还在进行）</title></circle><circle cx="183.7" cy="236.6" r="8" class="vhit"><title>稳健 · 第 8 天 · 平均压力 9（50 局还在进行）</title></circle><circle cx="204.2" cy="228.7" r="8" class="vhit"><title>稳健 · 第 9 天 · 平均压力 12（50 局还在进行）</title></circle><circle cx="224.7" cy="217.7" r="8" class="vhit"><title>稳健 · 第 10 天 · 平均压力 17（50 局还在进行）</title></circle><circle cx="245.3" cy="203.3" r="8" class="vhit"><title>稳健 · 第 11 天 · 平均压力 23（50 局还在进行）</title></circle><circle cx="265.8" cy="181.0" r="8" class="vhit"><title>稳健 · 第 12 天 · 平均压力 32（50 局还在进行）</title></circle><circle cx="286.3" cy="171.1" r="8" class="vhit"><title>稳健 · 第 13 天 · 平均压力 36（50 局还在进行）</title></circle><circle cx="306.8" cy="159.4" r="8" class="vhit"><title>稳健 · 第 14 天 · 平均压力 41（50 局还在进行）</title></circle><circle cx="327.4" cy="144.2" r="8" class="vhit"><title>稳健 · 第 15 天 · 平均压力 47（50 局还在进行）</title></circle><circle cx="347.9" cy="128.2" r="8" class="vhit"><title>稳健 · 第 16 天 · 平均压力 54（50 局还在进行）</title></circle><circle cx="368.4" cy="108.5" r="8" class="vhit"><title>稳健 · 第 17 天 · 平均压力 62（50 局还在进行）</title></circle><circle cx="388.9" cy="88.3" r="8" class="vhit"><title>稳健 · 第 18 天 · 平均压力 71（50 局还在进行）</title></circle><circle cx="409.5" cy="66.7" r="8" class="vhit"><title>稳健 · 第 19 天 · 平均压力 80（50 局还在进行）</title></circle><circle cx="430.0" cy="43.0" r="8" class="vhit"><title>稳健 · 第 20 天 · 平均压力 90（50 局还在进行）</title></circle><polyline points="40.0,216.2 60.5,223.2 81.1,224.6 101.6,227.0 122.1,222.5 142.6,208.3 163.2,204.5 183.7,191.3 204.2,175.7 224.7,167.3 245.3,144.7 265.8,116.9 286.3,109.2 306.8,92.4 327.4,78.2 347.9,69.6 368.4,59.5 388.9,46.3 409.5,40.3 430.0,32.6" class="vl" style="stroke:var(--s2)"/><circle cx="430.0" cy="32.6" r="4.5" class="vm" style="fill:var(--s2)"/><circle cx="40.0" cy="216.2" r="8" class="vhit"><title>融资 2 倍 · 第 1 天 · 平均压力 17（50 局还在进行）</title></circle><circle cx="60.5" cy="223.2" r="8" class="vhit"><title>融资 2 倍 · 第 2 天 · 平均压力 14（50 局还在进行）</title></circle><circle cx="81.1" cy="224.6" r="8" class="vhit"><title>融资 2 倍 · 第 3 天 · 平均压力 14（50 局还在进行）</title></circle><circle cx="101.6" cy="227.0" r="8" class="vhit"><title>融资 2 倍 · 第 4 天 · 平均压力 13（50 局还在进行）</title></circle><circle cx="122.1" cy="222.5" r="8" class="vhit"><title>融资 2 倍 · 第 5 天 · 平均压力 15（50 局还在进行）</title></circle><circle cx="142.6" cy="208.3" r="8" class="vhit"><title>融资 2 倍 · 第 6 天 · 平均压力 21（50 局还在进行）</title></circle><circle cx="163.2" cy="204.5" r="8" class="vhit"><title>融资 2 倍 · 第 7 天 · 平均压力 22（50 局还在进行）</title></circle><circle cx="183.7" cy="191.3" r="8" class="vhit"><title>融资 2 倍 · 第 8 天 · 平均压力 28（50 局还在进行）</title></circle><circle cx="204.2" cy="175.7" r="8" class="vhit"><title>融资 2 倍 · 第 9 天 · 平均压力 34（50 局还在进行）</title></circle><circle cx="224.7" cy="167.3" r="8" class="vhit"><title>融资 2 倍 · 第 10 天 · 平均压力 38（50 局还在进行）</title></circle><circle cx="245.3" cy="144.7" r="8" class="vhit"><title>融资 2 倍 · 第 11 天 · 平均压力 47（50 局还在进行）</title></circle><circle cx="265.8" cy="116.9" r="8" class="vhit"><title>融资 2 倍 · 第 12 天 · 平均压力 59（50 局还在进行）</title></circle><circle cx="286.3" cy="109.2" r="8" class="vhit"><title>融资 2 倍 · 第 13 天 · 平均压力 62（50 局还在进行）</title></circle><circle cx="306.8" cy="92.4" r="8" class="vhit"><title>融资 2 倍 · 第 14 天 · 平均压力 69（50 局还在进行）</title></circle><circle cx="327.4" cy="78.2" r="8" class="vhit"><title>融资 2 倍 · 第 15 天 · 平均压力 75（50 局还在进行）</title></circle><circle cx="347.9" cy="69.6" r="8" class="vhit"><title>融资 2 倍 · 第 16 天 · 平均压力 78（50 局还在进行）</title></circle><circle cx="368.4" cy="59.5" r="8" class="vhit"><title>融资 2 倍 · 第 17 天 · 平均压力 83（50 局还在进行）</title></circle><circle cx="388.9" cy="46.3" r="8" class="vhit"><title>融资 2 倍 · 第 18 天 · 平均压力 88（50 局还在进行）</title></circle><circle cx="409.5" cy="40.3" r="8" class="vhit"><title>融资 2 倍 · 第 19 天 · 平均压力 91（50 局还在进行）</title></circle><circle cx="430.0" cy="32.6" r="8" class="vhit"><title>融资 2 倍 · 第 20 天 · 平均压力 94（50 局还在进行）</title></circle><polyline points="40.0,211.2 60.5,204.0 81.1,183.1 101.6,167.3 122.1,147.1 142.6,127.9 163.2,129.4 183.7,147.6 204.2,130.1 224.7,109.7 245.3,96.2 265.8,71.3 286.3,60.5 306.8,44.6 327.4,36.2 347.9,27.6 368.4,23.3" class="vl" style="stroke:var(--s3)"/><circle cx="368.4" cy="23.3" r="4.5" class="vm" style="fill:var(--s3)"/><circle cx="40.0" cy="211.2" r="8" class="vhit"><title>10 倍配资 + 网贷 · 第 1 天 · 平均压力 20（50 局还在进行）</title></circle><circle cx="60.5" cy="204.0" r="8" class="vhit"><title>10 倍配资 + 网贷 · 第 2 天 · 平均压力 22（50 局还在进行）</title></circle><circle cx="81.1" cy="183.1" r="8" class="vhit"><title>10 倍配资 + 网贷 · 第 3 天 · 平均压力 31（50 局还在进行）</title></circle><circle cx="101.6" cy="167.3" r="8" class="vhit"><title>10 倍配资 + 网贷 · 第 4 天 · 平均压力 38（50 局还在进行）</title></circle><circle cx="122.1" cy="147.1" r="8" class="vhit"><title>10 倍配资 + 网贷 · 第 5 天 · 平均压力 46（50 局还在进行）</title></circle><circle cx="142.6" cy="127.9" r="8" class="vhit"><title>10 倍配资 + 网贷 · 第 6 天 · 平均压力 54（50 局还在进行）</title></circle><circle cx="163.2" cy="129.4" r="8" class="vhit"><title>10 倍配资 + 网贷 · 第 7 天 · 平均压力 54（50 局还在进行）</title></circle><circle cx="183.7" cy="147.6" r="8" class="vhit"><title>10 倍配资 + 网贷 · 第 8 天 · 平均压力 46（50 局还在进行）</title></circle><circle cx="204.2" cy="130.1" r="8" class="vhit"><title>10 倍配资 + 网贷 · 第 9 天 · 平均压力 53（50 局还在进行）</title></circle><circle cx="224.7" cy="109.7" r="8" class="vhit"><title>10 倍配资 + 网贷 · 第 10 天 · 平均压力 62（50 局还在进行）</title></circle><circle cx="245.3" cy="96.2" r="8" class="vhit"><title>10 倍配资 + 网贷 · 第 11 天 · 平均压力 67（50 局还在进行）</title></circle><circle cx="265.8" cy="71.3" r="8" class="vhit"><title>10 倍配资 + 网贷 · 第 12 天 · 平均压力 78（50 局还在进行）</title></circle><circle cx="286.3" cy="60.5" r="8" class="vhit"><title>10 倍配资 + 网贷 · 第 13 天 · 平均压力 82（50 局还在进行）</title></circle><circle cx="306.8" cy="44.6" r="8" class="vhit"><title>10 倍配资 + 网贷 · 第 14 天 · 平均压力 89（50 局还在进行）</title></circle><circle cx="327.4" cy="36.2" r="8" class="vhit"><title>10 倍配资 + 网贷 · 第 15 天 · 平均压力 92（50 局还在进行）</title></circle><circle cx="347.9" cy="27.6" r="8" class="vhit"><title>10 倍配资 + 网贷 · 第 16 天 · 平均压力 96（50 局还在进行）</title></circle><circle cx="368.4" cy="23.3" r="8" class="vhit"><title>10 倍配资 + 网贷 · 第 17 天 · 平均压力 98（50 局还在进行）</title></circle><text x="360.4" y="14.3" class="vlab" text-anchor="end">10 倍配资 + 网贷</text><text x="440.0" y="36.6" class="vlab">融资 2 倍</text><text x="440.0" y="55.6" class="vlab">稳健</text></svg>
+      </figure>
+    </div>
+    <div class="ai vfind">
+      <article><h3>设计目标：崩溃要来得晚</h3><p>10 倍配资 + 网贷的 50 局里，47 局走到压力崩溃：第 17 天 43 局、第 18 天 3 局、第 19 天 1 局，<em>没有一局提前</em>。平均每局被强平 1.6 次，24 局穿仓、变成负资产。</p></article>
+      <article><h3>不加杠杆，不会被压垮</h3><p>稳健和融资 2 倍都没有一局崩溃。稳健：19 局赚、19 局持平、12 局亏；融资 2 倍：22 局赚、25 局亏，输赢更两极。最终输赢一律扣掉借来的钱再算。</p></article>
+      <article><h3>意外的发现：压力不只来自钱</h3><p>稳健玩法亏钱几乎不加压力，可只有七成时间在学习时，复习进度越落越多，<em>压力在后期照样升到 90 左右</em>。「看盘挤掉了学习」本身就是代价，这正是游戏想让玩家体会到的。</p></article>
+      <article><h3>模拟暴露的问题</h3><p>崩溃几乎都卡在第 17 天，说明后期起作用的主要是「压力上限按天升高」这条规则，而不是玩家这一天做了什么。如果希望崩溃分散在第 17～20 天、让一部分人撑到最后，下一步就从这里调，再用同一套模拟验证。</p></article>
+    </div>
+    <details class="vtab"><summary>查看模拟数据</summary>
+        <div class="vtab-in"><table><caption>结局（每种 50 局）</caption><thead><tr><th>玩法</th><th>赚</th><th>持平</th><th>亏</th><th>压力崩溃</th><th>平均强平</th><th>穿仓局数</th></tr></thead><tbody><tr><td>稳健</td><td>19</td><td>19</td><td>12</td><td>0</td><td>0</td><td>0</td></tr><tr><td>融资 2 倍</td><td>22</td><td>3</td><td>25</td><td>0</td><td>0</td><td>0</td></tr><tr><td>10 倍配资 + 网贷</td><td>2</td><td>0</td><td>1</td><td>47</td><td>1.6</td><td>24</td></tr></tbody></table>
+        <table><caption>每天的平均压力</caption><thead><tr><th>天</th><th>稳健</th><th>融资 2 倍</th><th>10 倍配资 + 网贷</th></tr></thead><tbody><tr><td>第 1 天</td><td>15</td><td>17</td><td>20</td></tr><tr><td>第 2 天</td><td>11</td><td>14</td><td>22</td></tr><tr><td>第 3 天</td><td>8</td><td>14</td><td>31</td></tr><tr><td>第 4 天</td><td>6</td><td>13</td><td>38</td></tr><tr><td>第 5 天</td><td>5</td><td>15</td><td>46</td></tr><tr><td>第 6 天</td><td>6</td><td>21</td><td>54</td></tr><tr><td>第 7 天</td><td>7</td><td>22</td><td>54</td></tr><tr><td>第 8 天</td><td>9</td><td>28</td><td>46</td></tr><tr><td>第 9 天</td><td>12</td><td>34</td><td>53</td></tr><tr><td>第 10 天</td><td>17</td><td>38</td><td>62</td></tr><tr><td>第 11 天</td><td>23</td><td>47</td><td>67</td></tr><tr><td>第 12 天</td><td>32</td><td>59</td><td>78</td></tr><tr><td>第 13 天</td><td>36</td><td>62</td><td>82</td></tr><tr><td>第 14 天</td><td>41</td><td>69</td><td>89</td></tr><tr><td>第 15 天</td><td>47</td><td>75</td><td>92</td></tr><tr><td>第 16 天</td><td>54</td><td>78</td><td>96</td></tr><tr><td>第 17 天</td><td>62</td><td>83</td><td>98</td></tr><tr><td>第 18 天</td><td>71</td><td>88</td><td>92</td></tr><tr><td>第 19 天</td><td>80</td><td>91</td><td>95</td></tr><tr><td>第 20 天</td><td>90</td><td>94</td><td>94</td></tr></tbody></table></div></details>
   </section>
 
   <section id="play">

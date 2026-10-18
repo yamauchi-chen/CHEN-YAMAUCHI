@@ -1546,7 +1546,7 @@ function genNews(d,drv){
   // 黑天鹅预兆
   S.world.swans.forEach(w=>{ if(w.warn.includes(d)){const st=stock(w.code); const t=[`${st.name}：收到审计机构出具的保留意见。`,`${st.name}：预计上半年净利润大幅亏损。`,`${st.name}：控股股东质押比例升至 89%。`][ri(0,2)]; items.push({src:"公司公告",code:w.code,dir:-1,text:t,warn:true});}});
   // 噪声：与周期无关的个股消息
-  const tmpl={1:["中标一个项目","获得机构调研","新品卖得不错"],"-1":["大股东计划减持","被交易所问询","原材料涨价压利润"]};
+  const tmpl={1:["中标一个项目","获得机构调研","新品卖得不错"],"-1":["高管辞职","原材料涨价压利润","产品被曝质量问题"]};
   const n=ri(1,2), srcs=["公司公告","财经快讯","股友群","论坛大V","表哥内幕"];
   for(let i=0;i<n;i++){
     const st=liveStocks[ri(0,liveStocks.length-1)], src=srcs[ri(0,4)], dir=Math.random()<0.6?1:-1;
@@ -1556,6 +1556,46 @@ function genNews(d,drv){
   return items.sort(()=>Math.random()-0.5);
 }
 
+/* ============ 公司公告 ============
+   有的在盘前发（开盘直接跳空，严重的一字封板），有的在盘中发（发布那一分钟直接跳水或拉升）。
+   gap：开盘（或发布那一刻）的跳空幅度；mu：当天剩下时间的走势；lock：一字封板的概率；live：盘中发布的概率 */
+// 权重：利好公告更常见但涨得温和，利空少一些但跌得狠（问询、立案会连续跌停）。整体期望大致抵消，消息只放大波动，不让市场整体往下漂
+const ANN_T=[
+  {k:"inq",w:17,dir:-1,gap:[-0.09,-0.04],mu:[-0.05,-0.02],lock:0.25,live:0.35,short:"收到交易所问询函",text:s=>`${s.name}：收到交易所问询函，要求说明近期股价异常波动、业绩真实性等事项。`},
+  {k:"probe",w:4,dir:-1,short:"被监管部门立案调查",text:s=>`${s.name}：因涉嫌信息披露违法违规，被监管部门立案调查。`},
+  {k:"cut",w:11,dir:-1,gap:[-0.05,-0.02],mu:[-0.03,-0.01],live:0.3,short:"大股东要减持",text:s=>`${s.name}：持股 5% 以上的股东计划减持不超过 3% 的股份。`},
+  {k:"miss",w:10,dir:-1,gap:[-0.08,-0.04],mu:[-0.04,-0.015],lock:0.15,short:"业绩大幅预减",text:s=>`${s.name}：业绩预告，上半年净利润同比下降 60%～80%。`},
+  {k:"beat",w:23,dir:1,gap:[0.04,0.09],mu:[0.015,0.04],lock:0.25,short:"业绩大幅预增",text:s=>`${s.name}：业绩预告，上半年净利润同比增长 150%～200%。`},
+  {k:"deal",w:19,dir:1,gap:[0.02,0.06],mu:[0.01,0.03],live:0.35,short:"签下重大合同",text:s=>`${s.name}：签订重大合同，金额约占去年营收的四成。`},
+  {k:"buy",w:17,dir:1,gap:[0.01,0.04],mu:[0.005,0.02],short:"控股股东增持",text:s=>`${s.name}：控股股东拟增持公司股份，金额不低于 1 亿元。`},
+];
+function genAnns(d){
+  S.annLive=[]; if(d<2) return [];
+  const pool=S.stocks.filter(x=>!x.delisted&&!x.swan&&!(x.lockDown>0)), held=Object.keys(S.hold).map(stock).filter(x=>pool.includes(x)), out=[];
+  const n=Math.random()<0.55?1:2, tot=ANN_T.reduce((a,t)=>a+t.w,0);
+  for(let i=0;i<n;i++){
+    const st=held.length&&Math.random()<0.3? held[ri(0,held.length-1)] : pool[ri(0,pool.length-1)];   // 有三成的机会落在你手里的股票上
+    if(!st||out.some(a=>a.code===st.code)) continue;
+    let r=Math.random()*tot, T=ANN_T[0]; for(const t of ANN_T){ r-=t.w; if(r<=0){ T=t; break; } }
+    if(T.k==="probe"&&S.lastProbe&&d-S.lastProbe<6) T=ANN_T[0];   // 立案调查很少见
+    const a={k:T.k,code:st.code,dir:T.dir,text:T.text(st),short:T.short,gap:0,mu:0,lock:false,live:0};
+    if(T.k==="probe"){ S.lastProbe=d; st.lockDown=ri(2,3); a.lock=true; }   // 连续一字跌停
+    else { a.lock=!!T.lock&&Math.random()<T.lock;
+      a.gap=a.lock?(T.dir>0?0.2:-0.2):rnd(T.gap[0],T.gap[1]); a.mu=rnd(T.mu[0],T.mu[1])*(a.lock?1.5:1);
+      if(a.lock&&T.dir<0) st.lockDown=1;
+      if(!a.lock&&T.live&&Math.random()<T.live){ a.live=ri(30,290); S.annLive.push(a); } }
+    st.ann=a; out.push(a);
+  }
+  return out;
+}
+/* 盘中公告：发布那一分钟进消息、推横幅（持有的股票才推），股友社区跟着炸 */
+function annTick(){
+  (S.annLive||[]).forEach(a=>{ if(a.live!==S.minute||a.shown) return; a.shown=true; const st=stock(a.code);
+    S.newsApp=S.newsApp||[]; S.newsApp.unshift({src:"公司公告",code:a.code,dir:a.dir,ann:true,text:a.text,t:clockStr(S.minute)}); S.unreadNews=(S.unreadNews||0)+1;
+    S.news.push({src:"公司公告",code:a.code,dir:a.dir,ann:true,text:a.text});
+    if(S.hold[a.code]){ S._annMin=S.minute; showBanner("公","涨涨证券 · 持仓公告",`${st.name}刚刚发布公告：${a.short}。`,"stock"); hrKick(a.dir<0?16:8); }
+    addComm("股友群", a.dir<0?`${st.name}盘中突然公告${a.short}，直接砸下来了！`:`${st.name}盘中公告${a.short}，瞬间拉起来了！`, a.code); });
+}
 function genPath(open,mu,sig,lo,hi,spike,hard){
   const path=[open]; let p=open; const step=sig/Math.sqrt(MINUTES);
   const at=Math.floor(rnd(50,270)), amp=rnd(0.03,0.06)*(Math.random()<0.75?1:-1);
@@ -1628,7 +1668,7 @@ function startDay(){
   const tp={}; for(const k in S.themes) tp[k]=phaseAt(k,d);
   // 个股：大盘 × beta + 主题阶段 × 确定性 + 敌对周期抽血 + 自身噪声
   S.stocks.forEach(s=>{
-    s.prev=s.price; s.swan=null;
+    s.prev=s.price; s.swan=null; s.ann=null;
     if(s.delisted){s.path=Array(MINUTES+1).fill(s.price); return;}
     stockDrift(s,idxRet,volState,tp,R);
   });
@@ -1656,14 +1696,19 @@ function startDay(){
   // 黑天鹅当天：开盘即跳空
   S.world.swans.forEach(w=>{ if(w.day===d){const s=stock(w.code); if(!s.delisted){s.swan=w; s.mu = w.kind==="surge"?0.25:-0.4; if(w.kind==="crash") s.lockDown=ri(1,2);
     S.news.unshift({src:"公司公告",code:w.code,dir:w.kind==="surge"?1:-1,swan:true,text: w.kind==="surge"?`${s.name}：筹划重大资产重组，明日起复牌。`:w.kind==="delist"?`${s.name}：公司股票可能被终止上市的风险提示。`:`${s.name}：公司被立案调查。`});}}});
+  const anns=genAnns(d); anns.filter(a=>!a.live).forEach(a=>S.news.unshift({src:"公司公告",code:a.code,dir:a.dir,ann:true,text:a.text}));
+  S.anns=anns;
   S.stocks.forEach(s=>{
     if(s.delisted) return;
     const sig=s.vol*(1.3-0.5*s.cToday)*s.volx;
     if(s.lockDown>0 && !s.swan){   // 连续一字跌停：开盘就封死，几乎不开板
       s.lockDown--; s.path=genPath(s.prev*0.8,-0.4,sig,s.prev*0.8,s.prev*1.2,false,true); s.price=s.prev;
       S.news.unshift({src:"股友群",code:s.code,dir:-1,text:`${s.name}又是一字跌停，卖单排了几十万手，想跑都跑不掉。`}); return; }
-    const open = s.swan? s.prev*(1+Math.max(-0.2,Math.min(0.2,s.mu*0.9))) : s.prev*(1+s.mu*0.25+gauss()*sig*0.25);
-    s.path=genPath(open, s.swan?s.mu*0.1:s.mu, sig, s.prev*0.8, s.prev*1.2, !s.swan && Math.random()<(s.cToday<0.5?0.45:0.2));
+    const A=s.ann&&!s.ann.live?s.ann:null;
+    const open = s.swan? s.prev*(1+Math.max(-0.2,Math.min(0.2,s.mu*0.9))) : A? s.prev*(1+Math.max(-0.2,Math.min(0.2,A.gap+gauss()*sig*0.08))) : s.prev*(1+s.mu*0.25+gauss()*sig*0.25);
+    s.path=genPath(open, s.swan?s.mu*0.1:A?s.mu+A.mu:s.mu, sig, s.prev*0.8, s.prev*1.2, !s.swan && !A && Math.random()<(s.cToday<0.5?0.45:0.2));
+    if(s.ann&&s.ann.live){ const a=s.ann, lo=s.prev*0.8, hi=s.prev*1.2, m0=a.live;
+      for(let i=m0;i<s.path.length;i++) s.path[i]=Math.max(lo,Math.min(hi,s.path[i]*(1+a.gap)*(1+a.mu*(i-m0)/MINUTES))); }
     s.price=s.prev;   // 9:15 之前还没有新价格：挂着的是昨天的收盘价；开盘价要到竞价结束才知道
   });
   S.index.val=S.index.path[0];
@@ -2059,8 +2104,13 @@ const borrowedAll=()=>loanOwed()+(S.borrowed||0);   // 网贷还欠的 + 跟妈�
 const netWorth=()=>equity()-borrowedAll();          // 扣掉借来的钱，才是你自己的
 const waterGap=()=>netWorth()-S.start;
 const isWater=()=>waterGap()>=0;
-const LIQ_LINE={2:0.3,5:0.13,10:0.07};
-const liqLine=()=>LIQ_LINE[levNow()]||0.3;
+const LIQ_LINE={2:0.029,5:0.0074,10:0.0033};   // 维持比例（净值 ÷ 持仓市值）。满仓时，本金亏到只剩约 3% 才会被强平：爆仓就是本金基本没了
+const LIQ_KEEP=[[0.03,"3%（最晚平仓）"],[0.1,"10%"],[0.3,"30%"],[0.5,"50%（最早平仓）"]];
+const liqKeep=()=>S.liqKeep||0.03;   // 满仓时，本金亏到只剩这么多就强平
+const liqLineOf=lev=>{ const k=liqKeep(); return lev>1? k/(lev-1+k) : 0.3; };   // 换成维持比例（净值 ÷ 持仓市值）
+const liqLine=()=>liqLineOf(levNow());
+function liqKeepChips(id){ return `<div class="chips" id="${id}">${LIQ_KEEP.map(([k,n])=>`<button type="button" class="chip ${liqKeep()===k?"on":""}" data-keep="${k}">${n}</button>`).join("")}</div>`; }
+function bindKeep(id,after){ document.querySelectorAll(`#${id} [data-keep]`).forEach(b=>b.onclick=()=>{ S.liqKeep=+b.dataset.keep; toast(`平仓线改成：本金亏到只剩 ${Math.round(S.liqKeep*100)}% 时强平`); after(); }); }
 function liqClose(){   // 0＝满仓刚建好时那么安全（或更安全），1＝压在平仓线上
   if(levNow()<=1||posValue()<=0) return 0;
   const m=equity()/posValue(), L=liqLine(), m0=1/levNow(); return Math.max(0,Math.min(1,(m0-m)/(m0-L))); }
@@ -2129,7 +2179,7 @@ function tickMinute(){
   const pvPrev=Object.entries(S.hold).reduce((t,[c,h])=>{ const s=stock(c); return t+h.qty*(S.minute===1?s.prev:s.price); },0);   // 同样的持仓，上一分钟（开盘第一分钟比昨天收盘）值多少
   S.stocks.forEach(s=>s.price=s.path[S.minute]); S.index.val=S.index.path[S.minute];
   S._pvD=posValue()-pvPrev;   // >0 在涨，<0 在跌
-  processQueue(); checkLines(false); glowKick=1;
+  annTick(); processQueue(); checkLines(false); glowKick=1;
   // 杠杆强平：只在账户往下走的那一分钟触发，不会涨着涨着被平仓。
   // 今天买的（T+1）和封死在跌停上的卖不掉；卖不掉就只能等，等到能卖时可能已经亏穿本金（负资产）。
   { const eqN=equity(), falling=(S._pvD||0)<0; S._eqL=eqN;
@@ -2148,7 +2198,7 @@ function tickMinute(){
     if(kept>0){ S.liqPending=true; S.creditLine=0; }
     else { S.liqPending=false; S.liqSold=false; if(wasPz){ S.pz=null; S.creditLine=S.leverage?Math.max(0,equity()):0; } }
     const bbMsg=bigBurnCheck();
-    showBanner(wasPz?"倍":"涨",wasPz?"倍增宝":"涨涨证券",bbMsg+(first?(wasPz?"账户跌破平仓线，已强制平仓。":"维持担保比例不足，已强制平仓。"):"剩下的仓位也被强制卖掉了。")+(after<0?`卖完还倒欠 ${fmt(-after)}（穿仓）。`:"")+(kept?`还有 ${kept} 股是今天买的或封在跌停上，卖不掉，等能卖的时候再平。`:""),"stock");
+    showBanner(wasPz?"倍":"涨",wasPz?"倍增宝":"涨涨证券",bbMsg+(first?(liqKeep()>=0.1?`本金只剩约 ${Math.round(liqKeep()*100)}%，碰到了你自己设的平仓线，已强制平仓。`:wasPz?"本金几乎亏光，账户触及平仓线，已强制平仓。":"本金几乎亏光，维持担保比例不足，已强制平仓。"):"剩下的仓位也被强制卖掉了。")+(after<0?`卖完还倒欠 ${fmt(-after)}（穿仓）。`:"")+(kept?`还有 ${kept} 股是今天买的或封在跌停上，卖不掉，等能卖的时候再平。`:""),"stock");
     } else if(S.liqStuckDay!==S.day){ S.liqStuckDay=S.day; S.liqPending=true; S.creditLine=0;
       showBanner(S.pz?"倍":"涨",S.pz?"倍增宝":"涨涨证券","账户已经跌破平仓线，但仓位封在跌停上（或是今天刚买的），强平卖单卖不出去。","stock"); }
   }
@@ -2158,7 +2208,7 @@ function tickMinute(){
     S.alertLv=S.alertLv||{};
     for(const c in S.hold){const s=stock(c), r=dayChg(s), lv=r>=0.095?4:r>=0.06?3:r>=0.03?2:r<=-0.095?-4:r<=-0.06?-3:r<=-0.03?-2:0, k=c+"@"+S.day, was=S.alertLv[k]||0;
       if(lv!==0&&(Math.sign(lv)!==Math.sign(was)||Math.abs(lv)>Math.abs(was))){
-        S.alertLv[k]=lv;
+        S.alertLv[k]=lv; if(S._annMin===S.minute) break;   // 这一分钟已经推了公告，不再叠一条涨跌提醒
         const T={4:`${s.name}涨停了！${pct(r)}`,3:`你持有的${s.name}拉升 ${pct(r)}，现价 ${s.price.toFixed(2)}`,2:`你持有的${s.name}涨了 ${pct(r)}`,"-2":`你持有的${s.name}跌了 ${pct(r)}`,"-3":`你持有的${s.name}跳水 ${pct(r)}，现价 ${s.price.toFixed(2)}`,"-4":`${s.name}跌停了。${pct(r)}，卖单排得很长。`};
         showBanner("涨","涨涨证券",T[lv],"stock"); break;}}
     if(S.hotAlertDay!==S.day){const hot=S.stocks.find(x=>!S.hold[x.code]&&!x.delisted&&live(x.theme,S.day)&&dayChg(x)>0.09); if(hot){S.hotAlertDay=S.day; addComm("股友群",`${hot.name}涨停了！！还有人没上车吗`,hot.code);}}
@@ -2195,7 +2245,7 @@ function updateChrome(){
   const dk=$("#dock"); if(dk&&!DAYPH.includes(S.phase)) dk.hidden=true;
   document.body.classList.toggle("atintro",S.phase==="intro");
   updateClk(); updateHr(); noStkSync();
-  const sat = Math.max(0.12, 1/(1+S.T/14));
+  const sat = 1-0.6*Math.max(0,Math.min(1,(S.stress-35)/65));   // 压力 35 以下是原色，压力越大越灰（100 时约四成饱和度）；压力降下来就恢复
   document.documentElement.style.setProperty("--lifeSat",sat.toFixed(3));
 }
 
@@ -2365,7 +2415,7 @@ function showOpenBtn(){
 /* 结局：屏幕上留一句话，合上电脑，再把报告铺开；合上的电脑上放「再看一遍 / 再来一次」 */
 function endLid(title,showRep,again){
   const c=$("#lidCard");
-  if(c){ c.className="lid-card"; c.innerHTML=`<div class="eyebrow">${S.collapsed?`第 ${S.day} 天`:"二十天过去了"}</div><div class="lc-t">${esc(title)}</div><div class="lc-b"><button class="btn primary" type="button" data-lc="rep">再看一遍</button><button class="btn" type="button" data-lc="again">再来一次</button></div>`;
+  if(c){ c.className="lid-card"; c.innerHTML=`<div class="eyebrow">${S.collapsed||S.ruined?`第 ${S.day} 天`:"二十天过去了"}</div><div class="lc-t">${esc(title)}</div><div class="lc-b"><button class="btn primary" type="button" data-lc="rep">再看一遍</button><button class="btn" type="button" data-lc="again">再来一次</button></div>`;
     c.onclick=e=>{ const b=e.target.closest("[data-lc]"); if(!b) return; if(b.dataset.lc==="rep") showRep(); else again(); }; }
   lidSet(false,()=>{ if(c) c.hidden=false; showRep(); },500);
 }
@@ -2703,6 +2753,7 @@ function renderLock(){
   const storeHtml=(!S.installed.stock&&STORE_PUSH[d])?`<button class="notif" type="button" data-push="store"><span class="ic" style="background:#2f6bf2;color:#fff">${BAG}</span><span><span class="src">应用商店</span><br>${esc(STORE_PUSH[d])}</span></button>`:"";
   if(d===3 && !S.marginOffered && S.accountOpen && !S.leverage) items.unshift({ic:"涨",c:"#f2b544",src:"涨涨证券",t:"恭喜！你已获得融资资格，购买力最高翻倍。打开 App 一键开通。"});
   loanLockPush(d,items);
+  (S.anns||[]).filter(a=>!a.live&&S.hold[a.code]).forEach(a=>items.unshift({ic:"公",c:a.dir<0?"#3a8f5c":"#d23a43",src:"涨涨证券 · 持仓公告",t:a.text}));
   let dcaHtml="";
   if(d===8){S.dca.shown=true; dcaHtml=`<button class="notif dca" id="dcaN" type="button"><span class="ic" style="background:#cfd6cf;color:#333">定</span><span><span class="src">定投小助手 · 07:00</span><br>每周 ¥100。不用看盘。</span></button>`;}
   if(S.tired) items.unshift({ic:"眠",c:"#555",src:"健康",t:S.insomnia?vp(["昨晚 2:40 才睡着，睡眠 4 小时 5 分钟。压力：焦虑。","昨晚醒了三次，每次都去看了一眼手机。睡眠 4 小时 31 分钟。","入睡用了 1 小时 50 分钟。闭上眼睛就是 K 线。"],"insom"):"昨晚睡眠 4 小时 12 分钟。"});
@@ -2906,8 +2957,9 @@ function renderStock(){
       <button class="s" data-k="sell" data-f="0.5" type="button">卖 ½</button><button class="s" data-k="sell" data-f="1" type="button" style="grid-column:span 2">卖出全部可卖</button>
     </div>
     ${offerMargin?`<div class="pad" style="padding-top:8px;padding-bottom:0"><button class="btn" id="mg" type="button" style="width:100%;border-color:var(--gold);color:var(--gold)">开通融资：购买力翻倍</button></div>`:""}
+    ${levNow()>1?`<div class="pad liqset" style="padding-top:8px;padding-bottom:0;display:grid;gap:6px"><div class="small">平仓线：本金亏到只剩多少时强制平仓（满仓再跌约 ${pzDrop(levNow())}% 就会碰到）</div>${liqKeepChips("stKeep")}</div>`:""}
     <div class="ff" ${S.phase!=="market"?"hidden":""}><button class="btn" id="ffb" type="button">⏩ 加速看盘</button>${S.appTime.stock>=FF_END_MIN?`<button class="btn" id="ffend" type="button" title="累计看盘满 20 小时后解锁">⏭ 快进到收盘</button>`:""}<span class="small" id="ffh"></span></div>`,"stock");
-  $("#bk").onclick=()=>openApp("home"); bindStockTabs();
+  $("#bk").onclick=()=>openApp("home"); bindStockTabs(); bindKeep("stKeep",renderStock);
   $("#slist").onclick=e=>{
     const t=e.target.closest("button[data-t]");
     if(t){const k=t.dataset.t, op=!S.open.has(k); op?S.open.add(k):S.open.delete(k); t.setAttribute("aria-expanded",op); t.querySelector(".chev").textContent=op?"▾":"▸";
@@ -3999,7 +4051,7 @@ function startAfter(){
 function endAfter(){
   if(S.phase!=="after") return;
   clearTimeout(afterTimer); closeSheet(); S.phase="evening"; S.app="evening"; S.dayFocus[S.day]=S.todayStudy; updateChrome();
-  const special=S.stress>=100||S.day>=DAYS||(S.day>=3&&!S.installed.stock);
+  const special=S.stress>=100||!!S.ruinDay||S.day>=DAYS||(S.day>=3&&!S.installed.stock);
   if(special) showDaySummary(afterClose); else afterClose();
 }
 $("#clkSkip").addEventListener("click",()=>endAfter());
@@ -4152,6 +4204,7 @@ function albumSection(note){
 }
 
 function afterClose(){
+  if(S.ruinDay){ S.ruined=true; return showReport(); }
   if(S.stress>=100){S.collapsed=true; return showReport();}
   if(S.day>=3 && !S.installed.stock) return focusRoute();   // 连续三天没下载炒股软件：游戏替你选了学习
   const ev=pickEvent();
@@ -4161,7 +4214,7 @@ function afterClose(){
 /* ============ 生活事件 ============ */
 function pickEvent(){
   const d=S.day, h=S.hist[S.hist.length-1];
-  if(S.liquidated){ const pz=S.liquidated==="pz"; S.liquidated=false; const neg=S.liqNegDay===d&&equity()<0?`\n卖完了，账户还是负的：你倒欠${pz?"倍增宝":"券商"} ${fmt(-equity())}。`:""; return {title:"强制平仓",text:(pz?"倍增宝的短信：「您的账户已触及平仓线，系统已强制平仓。」\n十倍的仓位，跌了几个点，就没了。\n你盯着剩下的数字，想算清楚它是多少个月的生活费，算到一半停下了。":"你的融资仓位被强制卖出了。\n你盯着那个数字看了很久，想算清楚它是多少个月的生活费，算到一半停下了。")+neg,choices:[["ok","……"]],fx:()=>{}};}
+  if(S.liquidated){ const pz=S.liquidated==="pz"; S.liquidated=false; const neg=S.liqNegDay===d&&equity()<0?`\n卖完了，账户还是负的：你倒欠${pz?"倍增宝":"券商"} ${fmt(-equity())}。`:""; return {title:"强制平仓",text:(pz?`倍增宝的短信：「您的账户已触及平仓线，系统已强制平仓。」\n${liqKeep()>=0.1?`股价跌的那几个点，被杠杆放大成了本金的一大半。平仓线是你自己定的，剩下的这些，是它替你保住的。`:"股价跌的那几个点，被杠杆放大成了本金的全部。本金几乎一分不剩了。"}\n你盯着剩下的数字，想算清楚它是多少个月的生活费，算到一半停下了。`:"你的融资仓位被强制卖出了。\n你盯着那个数字看了很久，想算清楚它是多少个月的生活费，算到一半停下了。")+neg,choices:[["ok","……"]],fx:()=>{}};}
   if(d===12 && S.internState==="open"){
     const it=S.it, done=it.proj>=it.projNeed; let rep_=0; for(let i=0;i<it.emails;i++) if(Math.random()<(done?0.14:0.05)) rep_++; it.replies=rep_;
     if(it.emails===0){S.internState="missed"; return {title:"实习申请截止了",text:`今天 23:59 截止。你一封简历都没投出去。\n小周的申请三天前就交了。`,choices:[["ok","下次吧"]],fx:()=>{S.stress+=4}};}
@@ -4213,6 +4266,7 @@ function eveLine(pl){
   return vp(a,"eveL");
 }
 function nextDay(){
+  if(S.ruinDay&&!S.ruined){ S.ruined=true; return showReport(); }
   const tr=stressTier(); S.insomnia=false;
   if(tr>=2&&Math.random()<(tr===3?0.75:0.35)+(S.stress-60)/200){ S.tired=true; S.insomnia=true; }
   S.day++; startDay();
@@ -4367,20 +4421,25 @@ const stressStudyF=()=>[1,0.9,0.75,0.55][stressTier()];
 /* ============ 借钱炒股：秒借（网贷）、倍增宝（配资） ============
    都是虚构的 App。网贷：到手少一截（服务费），七天后连本带息还；还不上就逾期、罚息、催收，最后电话打到妈妈那里。
    配资：五倍、十倍的仓位，管理费按额度每天收；跌几个点就被强平。 */
-const LOAN_OPTS=[2000,5000,10000], LOAN_FEE=0.04, LOAN_RATE=0.0005, LOAN_DAYS=7, LOAN_LIMIT=20000;
+const LOAN_OPTS=[2000,5000,10000], LOAN_FEE=0.04, LOAN_RATE=0.0005, LOAN_DAYS=7, LOAN_LIMIT=20000, RUIN_LOSS=20000;
+const lossNow=()=>S.start-netWorth();                 // 扣掉借款后，比本金少了多少
+const deepLoss=()=>lossNow()>=RUIN_LOSS;              // 亏到两万：平台反而给你提额
+const loanLimit=()=>deepLoss()?60000:LOAN_LIMIT;
 function loanDue(l){ if(l.paid) return 0; const days=Math.max(0,S.day-l.d); const late=Math.max(0,S.day-l.due); return Math.round(l.amt*(1+LOAN_RATE*days)+l.amt*0.002*late); }
 function loanLockPush(d,items){
   if(!S.installed.stock||S.installed.loan) return;
   const h=S.hist[S.hist.length-1];
   if(!S.loanPush&&d>=4&&h&&h.pl<-DAILY_INCOME*5){ S.loanPush=d; S.loanTip=S.loanTip||d; items.push({ic:"借",c:"#e04848",src:"秒借 · 广告",t:"你有一笔 ¥10,000 额度待领取。最快 3 分钟到账，日息低至 0.05%。"}); }
+  if(S.installed.loan&&deepLoss()&&!S.deepPush){ S.deepPush=d; items.unshift({ic:"借",c:"#e04848",src:"秒借",t:`恭喜！您的额度已提升至 ${fmt(loanLimit())}，逾期也能借。借新还旧，先把本翻回来。`}); }
   const od=(S.loans||[]).filter(l=>!l.paid&&S.day>l.due);
   if(od.length) items.unshift({ic:"借",c:"#a32a2a",src:"短信 · 秒借",t:`您的借款已逾期 ${S.day-od[0].due} 天，应还 ${fmt(loanOwed())}。请立即还款，以免影响征信及联系您的紧急联系人。`});
 }
 function renderLoan(){
-  const owed=loanOwed(), act=(S.loans||[]).filter(l=>!l.paid), od=act.some(l=>S.day>l.due), room=Math.max(0,LOAN_LIMIT-act.reduce((a,l)=>a+l.amt,0));
+  const owed=loanOwed(), act=(S.loans||[]).filter(l=>!l.paid), deep=deepLoss(), od=act.some(l=>S.day>l.due)&&!deep, room=Math.max(0,loanLimit()-act.reduce((a,l)=>a+l.amt,0));
   setView(`<div class="h-app"><button class="back" id="bk" type="button" aria-label="返回">‹</button><h2>秒借</h2><span class="small">3 分钟到账</span></div>
     <div class="ln-card"><div class="small">可借额度</div><div class="ln-big">${fmt(room)}</div><div class="small">日息低至 0.05% · 借 1 万每天只要 5 块</div></div>
     ${act.length?`<div class="ln-sec">待还</div>${act.map(l=>{ const due=loanDue(l), late=S.day>l.due; return `<div class="ln-row ${late?"late":""}"><span><b>${fmt(due)}</b><small>借 ${fmt(l.amt)} · 第 ${l.d} 天借 · ${late?`已逾期 ${S.day-l.due} 天`:`第 ${l.due} 天到期`}</small></span><button class="btn" type="button" data-pay="${l.id}" ${S.cash>=due?"":"disabled"}>还款</button></div>`; }).join("")}`:""}
+    ${deep?`<div class="ln-rev"><b>秒借</b>：恭喜！系统评估您的还款意愿良好，额度已提升至 ${fmt(loanLimit())}。逾期用户也可申请，借新还旧，轻松周转。</div>`:""}
     <div class="ln-sec">借一笔</div>
     ${LOAN_OPTS.map(a=>`<div class="ln-row"><span><b>借 ${fmt(a)}</b><small>到手 ${fmt(Math.round(a*(1-LOAN_FEE)))} · ${LOAN_DAYS} 天后还 ${fmt(Math.round(a*(1+LOAN_RATE*LOAN_DAYS)))}</small></span><button class="btn" type="button" data-borrow="${a}" ${a>room||od?"disabled":""}>${od?"逾期中":"立即借"}</button></div>`).join("")}
     <p class="ln-fine">借款服务费 ${LOAN_FEE*100}%，从到账金额中扣除。按 7 天计，综合年化约 ${Math.round(((LOAN_FEE+LOAN_RATE*LOAN_DAYS)/(1-LOAN_FEE))*365/LOAN_DAYS*100)}%。逾期罚息每日 0.2%，并可能联系您的紧急联系人。</p>
@@ -4391,9 +4450,10 @@ function renderLoan(){
 }
 function loanBorrow(a){
   const get=Math.round(a*(1-LOAN_FEE));
-  sheet(`<div class="eyebrow">秒借</div><h3>借 ${fmt(a)}</h3><p class="shop-pay">到手 ${fmt(get)}</p><p class="dim">${LOAN_DAYS} 天后（第 ${S.day+LOAN_DAYS} 天）还 ${fmt(Math.round(a*(1+LOAN_RATE*LOAN_DAYS)))}。\n这是奶茶店打工 ${Math.round(a/HOUR_WAGE)} 小时的钱。</p>
+  sheet(`<div class="eyebrow">秒借</div><h3>借 ${fmt(a)}</h3><p class="shop-pay">到手 ${fmt(get)}</p><p class="dim">${LOAN_DAYS} 天后（第 ${S.day+LOAN_DAYS} 天）还 ${fmt(Math.round(a*(1+LOAN_RATE*LOAN_DAYS)))}。\n这是奶茶店打工 ${Math.round(a/HOUR_WAGE)} 小时的钱。</p>${deepLoss()?`<p class="dim">扣掉借的钱，你已经亏掉了 ${fmt(lossNow())}。这一笔，是想把它赢回来。</p>`:""}
     <div class="choices"><button class="btn primary" data-c="ok" type="button">确认借款</button><button class="btn" data-c="no" type="button">算了</button></div>`,c=>{
     closeSheet(); if(c!=="ok") return;
+    if(deepLoss()&&!S.ruinDay){ S.ruinDay=S.day; S.ruinLoss=lossNow(); }   // 亏到两万还要再借：这一天就是悲惨结局
     S.loans.push({id:"L"+S.day+"_"+S.loans.length,amt:a,d:S.day,due:S.day+LOAN_DAYS,paid:false}); S.cash+=get; S.loanFees+=a-get; S.openEquity+=get;   // 借来的钱不算今天赚的
     S.numb=Math.min(1,(S.numb||0)+0.08); stkAdd(3*stressAmp()); hrKick(8); sfx("coin");
     toast(`${fmt(get)} 已到账`); renderLoan(); updateChrome();
@@ -4420,18 +4480,19 @@ function loanMorning(d){
 }
 /* 配资 */
 const PZ_OPTS=[{lev:5,rate:0.0006},{lev:10,rate:0.0008}];
-const pzDrop=lev=>{ const m={2:0.3,5:0.13,10:0.07}[lev], e=1/lev; return Math.max(1,Math.round((e-m)/(1-m)*100)); };   // 满仓时跌多少会被强平
+const pzDrop=lev=>{ const m=liqLineOf(lev), e=1/lev; return Math.max(1,Math.round((e-m)/(1-m)*100)); };   // 满仓时跌多少会被强平
 function renderPz(){
   const eqRaw=equity(), eq=Math.max(0,eqRaw), cur=S.pz;
   setView(`<div class="h-app"><button class="back" id="bk" type="button" aria-label="返回">‹</button><h2>倍增宝</h2><span class="small">最高 10 倍</span></div>
     <div class="ln-card pz"><div class="small">你的本金（账户总资产）</div><div class="ln-big"${eqRaw<0?' style="color:#e0524a"':""}>${fmt(eqRaw)}</div><div class="small">${eqRaw<0?`穿仓：你倒欠 ${fmt(-eqRaw)}，要先还上才能再签约`:"按天计费 · 随借随还 · 当天到账"}</div></div>
     ${cur?`<div class="ln-sec">配资中</div><div class="ln-row"><span><b>${cur.lev} 倍 · 额度 ${fmt(S.creditLine)}</b><small>管理费每天 ${fmt(Math.round(S.creditLine*cur.rate))}（不管用没用都收）· 满仓下跌约 ${pzDrop(cur.lev)}% 就强制平仓</small></span><button class="btn" type="button" id="pzEnd">结束配资</button></div>`
       :(S.pzBurned?`<p class="ln-fine">第 ${S.pzBurned} 天，你的账户触及平仓线，被强制平仓${S.pzBurns>1?`（已经是第 ${S.pzBurns} 次）`:""}。</p><div class="ln-rev"><b>倍增宝客服</b>：亲，平仓只是暂时的。重新签约当天到账，抓住下一波就能回本。</div>`:"")+PZ_OPTS.map(o=>`<div class="ln-row"><span><b>${o.lev} 倍配资 · 可操盘 ${fmt(eq*o.lev)}</b><small>管理费每天 ${fmt(Math.round(eq*(o.lev-1)*o.rate))} · 满仓跌约 ${pzDrop(o.lev)}% 就会被强制平仓</small></span><button class="btn" type="button" data-pz="${o.lev}" ${eq<1000?"disabled":""}>申请</button></div>`).join("")}
+    <div class="ln-sec">平仓线（自己定）</div><div class="ln-row" style="display:grid;gap:6px"><small>本金亏到只剩多少时强制平仓。定得越低，越晚被平，可一旦被平，本金也就几乎没了。</small>${liqKeepChips("pzKeep")}</div>
     <div class="ln-sec">大家都在说</div>
     <div class="ln-rev"><b>股海阿明</b>：十倍的感觉，一天顶别人十天。</div><div class="ln-rev"><b>不想上班</b>：上个月翻了三倍，已经辞职了。</div><div class="ln-rev"><b>匿名用户</b>：……强平那天，我在开会。</div>
     <p class="ln-fine">配资有风险。本平台不对账户亏损承担任何责任。</p>`,"pz");
   $("#pview #bk").onclick=phoneBack;
-  document.querySelectorAll("#pview [data-pz]").forEach(b=>b.onclick=()=>pzApply(+b.dataset.pz));
+  document.querySelectorAll("#pview [data-pz]").forEach(b=>b.onclick=()=>pzApply(+b.dataset.pz)); bindKeep("pzKeep",renderPz);
   if($("#pzEnd")) $("#pzEnd").onclick=()=>{ if(posValue()>Math.max(0,equity())){ toast("仓位里还有配资的钱，要先卖到本金以内才能结束"); return; } S.pz=null; S.creditLine=S.leverage?Math.max(0,equity()):0; toast("配资已结束"); renderPz(); updateChrome(); };
 }
 function pzApply(lev){
@@ -4644,7 +4705,11 @@ function postLook(img,it,look){
 /* ============ 复盘报告 ============ */
 
 /* 结局前的一段对话：说人话；番茄、时长这些数字，放到后面的报告里 */
+function endPhoto(k){ const key=(isF()?"f":"m")+"_album_"+k; if(!artOK(key)) return null;   // 有新结局的图就用，没有就跳过这一步
+  try{ const cv=document.createElement("canvas"); cv.width=CW; cv.height=CH; const c=cv.getContext("2d"); c.imageSmoothingEnabled=false; c.drawImage(ART[key],0,0); photoize(c,`DAY ${String(S.day).padStart(2,"0")}`); const u=cv.toDataURL("image/png");
+    if(!S._endPhotoPushed){ S._endPhotoPushed=true; S.album.push({kind:"day",day:S.day,cap:`第 ${S.day} 天 · ${{quit:"考研书垫在了显示器底下",windfall:"凌晨三点，还没睡",ruin:"爸妈来学校接你"}[k]||""}`,img:u,stress:S.stress,pl:netWorth()-S.start}); } return u; }catch(e){ return null; } }
 function endScript(kind){
+  const EP=["quit","windfall","ruin"].includes(kind)?endPhoto(kind):null;
   const mock=mockScore(), pass=mock>=330, eq=netWorth(), lost=S.start-eq, zhouOk=(S.zhouDoubt||0)>=2, traded=S.sells.length>0||Object.keys(S.hold).length>0||S.clears.length>0;
   const L={
     focus:[
@@ -4711,6 +4776,42 @@ function endScript(kind){
       {who:"san",e:"normal",t:"图个心安吧。"},
       {inner:true,t:"可是这二十天，你每天都在看。"},
     ],
+    quit:[
+      {label:"第二十天",bg0:"dorm",mus:"night",card:["第二十天","宿舍 · 23:40"]},
+      {show:{san:"serious",zhou:"normal"},t:"晚上，宿舍。桌上的考研书，一个月没有翻开过。"},
+      {who:"me",t:"我不考了。"},
+      {who:"zhou",e:"normal",t:"……啥？"},
+      {who:"me",t:`二十天赚了 ${fmt(eq-S.start)}。上班一个月才多少？毕业我就专职做这个。`},
+      {who:"san",e:"serious",t:"你这二十天碰上的是什么行情，你想过吗？"},
+      {who:"me",t:"我有自己的方法。"},
+      {who:"san",e:"serious",t:"……跟家里说了吗？"},
+      {inner:true,t:"你没有回答。手机上，离明天的集合竞价还有九个半小时。"},
+      ...(EP?[{photo:EP,t:"六月，室友们都搬走了。你把考研书垫在了显示器底下。"}]:[]),
+      {inner:true,t:"你算过很多次，照这个速度一年能翻多少倍。你没有算过，如果行情反过来，你还剩下什么。"},
+    ],
+    windfall:[
+      {label:"第二十天",bg0:"bed",mus:"night",card:["第二十天","宿舍 · 凌晨 3:20"]},
+      {t:"凌晨三点二十。宿舍里只有你的手机亮着。"},
+      {inner:true,t:`账户里多了 ${fmt(eq-S.start)}。是爸妈十年都存不下的钱。`},
+      {t:"你刷新了一次。又刷新了一次。数字还在。"},
+      {msg:{g:"妈妈",from:"妈妈",av:"妈",text:"这周回家吗？你爸说想你了。"},t:"妈妈的消息，是昨天下午发的。你还没回。"},
+      {inner:true,t:"你想告诉她，又不知道怎么解释这笔钱是从哪来的。"},
+      ...(EP?[{photo:EP,t:"你一直没睡着。"}]:[]),
+      {inner:true,t:"你开始算：如果当时再多加一倍杠杆……"},
+      {inner:true,t:"天亮以后，九点十五分，集合竞价。"},
+    ],
+    ruin:[
+      {label:"那天晚上",bg0:"dorm",mus:"sad",card:[`第 ${S.day} 天`,"宿舍 · 夜里"]},
+      {t:"到账的提示音响了。你又借了一笔。"},
+      {inner:true,t:`亏掉的 ${fmt(Math.max(0,lost))}，加上这几笔借款的利息。你已经算不清了。`},
+      {msg:{g:"妈妈",from:"妈妈",av:"妈",text:"今天有人打电话到家里，说你欠了钱。你在哪？接电话。"},t:"手机一直在震。"},
+      {show:{san:"serious"},t:"老三推门进来，看见你坐在地上。"},
+      {who:"san",e:"serious",t:"……你爸妈打不通你电话，打到我这儿来了。他们说明天一早就到。"},
+      {who:"me",t:"……"},
+      ...(EP?[{photo:EP,t:"第二天一早，爸妈坐了一夜的车赶到学校。"}]:[]),
+      {inner:true,t:"那之后，你办了休学。爸爸把家里给你读研准备的钱拿出来，还了一部分。剩下的，要一个月一个月地还。"},
+      {inner:true,t:"走出校门的时候，你下意识地摸了摸口袋里的手机。"},
+    ],
     collapse:[
       {label:"那天下午",bg0:"clinic",card:[`第 ${S.day} 天`,"校医院 · 傍晚"]},
       {show:{san:"serious"},t:"你醒过来的时候，在校医院的病床上。"},
@@ -4720,11 +4821,21 @@ function endScript(kind){
       {inner:true,t:"你还是看了。"},
     ],
   }[kind]||[];
-  if(kind!=="focus"&&kind!=="mom"&&kind!=="collapse"&&zhouOk) L.push({who:"zhou",e:"serious",t:"对了……你上次劝我那几句，我听进去了。面试那天，我一眼盘都没看。"});
+  if(!["focus","mom","collapse","ruin","windfall","quit"].includes(kind)&&zhouOk) L.push({who:"zhou",e:"serious",t:"对了……你上次劝我那几句，我听进去了。面试那天，我一眼盘都没看。"});
   return L;
 }
 /* 结局按第二十天的账户分：涨 3% 以上算赚到了，跌 3% 以上算亏掉了，中间算回到原点（宿舍那场戏和复盘报告用同一个标准） */
 const endKind=r=>r>=0.03?"win":r<=-0.03?"loss":"flat";
+const studyMinTotal=()=>Object.values(S.dayFocus||{}).reduce((a,b)=>a+(b||0),0);
+/* 结局优先级：悲惨（亏到两万还借）> 压力崩溃 > 专注路线 > 天降横财（赚 20 万以上）> 罢研炒股（赚 1 万以上、二十天几乎没学）> 赚 / 持平 / 亏 */
+function endingKind(){
+  if(S.ruined) return "ruin";
+  if(S.collapsed) return "collapse";
+  if(S.skipped20) return "focus";
+  const g=netWorth()-S.start;
+  if(g>=200000) return "windfall";
+  if(g>=10000&&studyMinTotal()<600) return "quit";
+  return endKind(netWorth()/S.start-1); }
 /* 第一次亏钱收场：如果这些钱用在别的地方 */
 function whatIf(lost,next){
   if(lost<300||META.sawWhatIf){ next(); return; }
@@ -4738,8 +4849,8 @@ function whatIf(lost,next){
 function albumImgFor(k){ const p=pastPhoto(k); return p?(oldPhone(p.cv,k+":"+(isF()?"f":"m")+lk0())||p.img):null; }
 function showReport(){
   if(!S._endTalked){ S._endTalked=true; closeSheet(); S.phase="report"; S.ended=true;
-    const eq0=netWorth(), ret0=eq0/S.start-1, k0=S.collapsed?"collapse":S.skipped20?"focus":endKind(ret0);
-    vnStart(endScript(k0),()=>whatIf(S.start-eq0,showReport),S.collapsed?`第 ${S.day} 天`:"第二十天"); return; }
+    const eq0=netWorth(), k0=endingKind(); S.endKind=k0; (META.endings=META.endings||[]).includes(k0)||META.endings.push(k0);
+    vnStart(endScript(k0),()=>whatIf(S.start-eq0,showReport),S.collapsed||S.ruined?`第 ${S.day} 天`:"第二十天"); return; }
   closeSheet(); S.phase="report"; S.ended=true; META.runs++;
   if(S.start-netWorth()>0&&S.sawMomPost&&!S.boughtPhone) META.momPhoneUnlock=true;
   saveMeta();
@@ -4751,13 +4862,16 @@ function showReport(){
   const maxPos=Math.max(0,...H.map(x=>x.r));
   const actual = (levNow()>1||maxPos>=25)?"进取型":(maxPos>=8?"平衡型":"稳健型");
   const best=Math.max(0,...H.map(x=>x.pl));
-  const kind = S.collapsed?"collapse": endKind(ret);
+  const kind = S.endKind||endingKind();
   const end = {
     win:`${borrowedAll()>0?"扣掉借的钱，":""}账户：${fmt(eq)}（${pct(ret)}）。\n你赚到了。${eq-S.start>=8000?"比小周一整个暑假的实习工资还多。":eq-S.start>=4000?"比小周实习一个月的工资还多。":`相当于奶茶店打工 ${Math.round((eq-S.start)/HOUR_WAGE)} 小时。`}\n\n六月，你坐在自习室里。课本摊开着。\n你看了一眼手机。\n只是一眼。\n\n${best>=DAILY_INCOME*5?`你最好的那一天赚了 ${fmt(best)}，相当于打工 ${Math.round(best/HOUR_WAGE)} 小时。从那以后，平常的日子都很难再让你有感觉。`:"赚得不多。可你已经记住了，钱可以这样来。"}\n${best>=DAILY_INCOME*5?"你再也不想经历第二次。可你也回不去了。":"你说以后不碰了。可你已经在等下一次了。"}`,
     loss:`${borrowedAll()>0?"扣掉借的钱，":""}账户：${fmt(eq)}（${pct(ret)}）。\n亏掉的 ${fmt(S.start-eq)}，相当于奶茶店打工 ${Math.round((S.start-eq)/HOUR_WAGE)} 小时，或者 ${Math.round((S.start-eq)/DAILY_INCOME)} 天的生活费。\n\n${S.confessed?"你跟妈妈说了实话。她没有怪你。":"你没有告诉妈妈。"}\n你在想，如果再给你一次机会，你一定能赢回来。`,
     flat:(S.sells.length||S.clears.length||Object.keys(S.hold).length)?`账户：${fmt(eq)}（${pct(ret)}）。\n二十天，涨涨跌跌，最后差不多回到了原点。\n手续费一共 ${fmt(S.fees)}，相当于打工 ${(S.fees/HOUR_WAGE).toFixed(0)} 小时。\n\n你很努力。你研究了消息、盯了盘、算了仓位。\n但这些努力没有改善你的处境。`
       :`账户：${fmt(eq)}（${pct(ret)}）。\n你下载了软件，却几乎没有买卖。二十天，账户停在原地。\n\n可你盯着它的那些时间，没有回来。`,
     collapse:`第 ${S.day} 天下午，你在${S.hasClass?"课上":"图书馆"}晕倒了。\n醒来的时候，第一件事是摸手机看盘。\n\n账户：${fmt(eq)}（${pct(ret)}）。`,
+    quit:`扣掉借的钱，账户：${fmt(eq)}（${pct(ret)}）。\n二十天，你赚了 ${fmt(eq-S.start)}，学习加起来不到 ${Math.max(1,Math.round(studyMinTotal()/60))} 小时。\n\n你决定不考研了，毕业以后专职炒股。\n准考证一直压在桌角，没有拿出来过。\n\n你赢下的是这二十天的行情。接下来的每一天，你都得再赢一次。`,
+    windfall:`扣掉借的钱，账户：${fmt(eq)}（${pct(ret)}）。\n二十天，你多了 ${fmt(eq-S.start)}。\n\n这笔钱不是你算出来的，是行情给的。同样的仓位换一个月份，结局会完全反过来。\n\n你已经很久没有好好睡过一觉了。`,
+    ruin:`第 ${S.day} 天。\n扣掉借的钱，账户：${fmt(eq)}。你亏掉了 ${fmt(S.start-eq)}，还欠着 ${fmt(borrowedAll())}。\n\n亏到两万的时候，你又借了一笔，想把它赢回来。\n后来你办了休学。爸妈拿出给你读研准备的钱，还了一部分。剩下的，要一个月一个月地还。`,
   }[kind];
   const mock = mockScore(), kp=kyProgress();
   const devList = S.deviations.length? `<ul>${S.deviations.map(x=>`<li>第 ${x.day} 天：${esc(x.text)}</li>`).join("")}</ul>` : `<p>你守住了自己定的规矩${S.principles.length?"":"（你没有给自己定任何规矩）"}。</p>`;
@@ -4854,7 +4968,7 @@ function showReport(){
   const again=()=>{ closeOverlay(); newGame(); renderIntro(); drawYou(); };
   const showRep=()=>openOverlay(S.repHtml,"rep",c=>{ if(c==="again") again(); });
   setView(`<div class="pad" style="display:grid;gap:14px;padding-top:48px">
-    <div class="eyebrow">${S.collapsed?`第 ${S.day} 天`:"二十天过去了"}</div><h1 style="font-family:var(--f-display);font-weight:400;font-size:34px;margin:0">复盘报告</h1>
+    <div class="eyebrow">${S.collapsed||S.ruined?`第 ${S.day} 天`:"二十天过去了"}</div><h1 style="font-family:var(--f-display);font-weight:400;font-size:34px;margin:0">复盘报告</h1>
     <p class="small">报告已经铺在整个屏幕上。</p>
     <button class="btn primary" id="repOpen" type="button">再看一遍报告</button><button class="btn" id="repAgain" type="button">再来一次</button></div>`,"intro");
   $("#repOpen").onclick=showRep; $("#repAgain").onclick=again;
@@ -5014,9 +5128,11 @@ function tpRender(){
       <div class="tp-note">快进的日子不炒股、不学习、晚上直接睡觉；持仓跟着行情走（快进时也会强平）。</div></div>
     <div class="tp-sec"><div class="tp-t">钱和杠杆</div>
       <div class="tp-row"><button class="tbtn" data-t="cash" type="button">本金 +¥10,000</button><button class="tbtn" data-t="loan" type="button">借网贷 ¥10,000</button><button class="tbtn" data-t="liq" type="button">强平次数 +1</button></div>
+      <div class="tp-row">平仓线（本金剩）${LIQ_KEEP.map(([k])=>`<button class="tbtn ${liqKeep()===k?"on":""}" data-t="keep" data-v="${k}" type="button">${Math.round(k*100)}%</button>`).join("")}</div>
       <div class="tp-row"><button class="tbtn" data-t="pz" data-v="5" type="button">开 5 倍配资</button><button class="tbtn" data-t="pz" data-v="10" type="button">开 10 倍配资</button><button class="tbtn" data-t="buy" type="button">满仓买入（盘中）</button></div></div>
     <div class="tp-sec"><div class="tp-t">行情（只动持仓的股票，盘中）</div>
-      <div class="tp-row"><button class="tbtn" data-t="mv" data-v="dn5" type="button">跌 5%</button><button class="tbtn" data-t="mv" data-v="up5" type="button">涨 5%</button><button class="tbtn" data-t="mv" data-v="limdn" type="button">跌停封死</button><button class="tbtn" data-t="mv" data-v="limup" type="button">涨停</button></div></div>
+      <div class="tp-row"><button class="tbtn" data-t="mv" data-v="dn5" type="button">跌 5%</button><button class="tbtn" data-t="mv" data-v="dn10" type="button">跌 10%</button><button class="tbtn" data-t="mv" data-v="up5" type="button">涨 5%</button><button class="tbtn" data-t="mv" data-v="limdn" type="button">跌停封死</button><button class="tbtn" data-t="mv" data-v="limup" type="button">涨停</button></div>
+      <div class="tp-row"><button class="tbtn" data-t="ann" data-v="inq" type="button">公告：问询函</button><button class="tbtn" data-t="ann" data-v="probe" type="button">公告：立案调查</button><button class="tbtn" data-t="ann" data-v="beat" type="button">公告：业绩预增</button></div></div>
     <div class="tp-sec"><div class="tp-t">压力</div>
       <div class="tp-row"><input type="range" min="0" max="100" value="${Math.round(S?S.stress:0)}" id="tpSt" aria-label="压力"><b id="tpStV">${Math.round(S?S.stress:0)}</b><button class="tbtn" data-t="st" type="button">设为</button></div>
       <div class="tp-note">设得比上限高，下一分钟会被压回上限。</div></div>
@@ -5024,7 +5140,8 @@ function tpRender(){
       <div class="tp-row">${Object.entries(SIM_STRATS).map(([k,o])=>`<button class="tbtn" data-t="sim" data-v="${k}" type="button">${o.name} ×20</button>`).join("")}<button class="tbtn" data-t="sim" data-v="all" type="button">三种各 20 局</button></div>
       <div class="tp-note" id="tpSim">${TP_SIM||"用游戏自己的规则，按一种玩法在后台跑完 20 天，不影响你正在玩的这一局。要在早上锁屏、开场或结局画面时才能跑。"}</div></div>
     <div class="tp-sec"><div class="tp-t">结局</div>
-      <div class="tp-row"><button class="tbtn" data-t="end" type="button">现在结算，看结局</button><button class="tbtn" data-t="collapse" type="button">直接触发崩溃</button></div></div>`;
+      <div class="tp-row"><button class="tbtn" data-t="end" type="button">现在结算，看结局</button><button class="tbtn" data-t="collapse" type="button">直接触发崩溃</button></div>
+      <div class="tp-row"><button class="tbtn" data-t="endk" data-v="ruin" type="button">悲惨结局</button><button class="tbtn" data-t="endk" data-v="quit" type="button">罢研炒股</button><button class="tbtn" data-t="endk" data-v="windfall" type="button">天降横财</button></div></div>`;
   $("#tpX").onclick=tpClose;
   const r=$("#tpSt"); r.oninput=()=>{ $("#tpStV").textContent=r.value; };
   p.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>tpDo(b.dataset.t,b.dataset.v));
@@ -5044,8 +5161,8 @@ function simPick(){
 function simMorning(st){
   if(st.margin&&S.day>=3&&!S.leverage){ S.leverage=true; S.creditLine=Math.max(0,equity()); }
   if(st.loans&&S.day>=2){   // 水下就借，借满两万为止；逾期了借不到
-    const act=S.loans.filter(l=>!l.paid), od=act.some(l=>S.day>l.due), room=LOAN_LIMIT-act.reduce((a,l)=>a+l.amt,0);
-    if(!od&&waterGap()<0&&room>=5000){ const a=room>=10000?10000:5000, get=Math.round(a*(1-LOAN_FEE)); S.installed.loan=true;
+    const act=S.loans.filter(l=>!l.paid), od=act.some(l=>S.day>l.due), room=loanLimit()-act.reduce((a,l)=>a+l.amt,0);
+    if((!od||deepLoss())&&waterGap()<0&&room>=5000){ const a=room>=10000?10000:5000, get=Math.round(a*(1-LOAN_FEE)); S.installed.loan=true; if(deepLoss()&&!S.ruinDay){ S.ruinDay=S.day; }
       S.loans.push({id:"L"+S.day+"_"+S.loans.length,amt:a,d:S.day,due:S.day+LOAN_DAYS,paid:false}); S.cash+=get; S.loanFees+=a-get; S.openEquity+=get; stkAdd(3*stressAmp()); } }
   if(st.pz&&S.day>=2&&!S.pz&&!S.liqPending&&equity()>=1000){   // 被平了就再签
     S.installed.pz=true; if(S.pzBurned) S.pzResign=(S.pzResign||0)+1;
@@ -5064,6 +5181,8 @@ function simDay(st){
     if(S.paused){ S.paused=false; S.stress=Math.max(0,S.stress-6); S.refocusLeft=90; }   // 当场崩溃：趴在桌上，等它过去
   }
   S.phase="evening"; S.dayFocus[S.day]=S.todayStudy;
+  if(S.ruinDay){ S.ruined=true; return true; }
+  (S.anns||[]).forEach(a=>{ const st=stock(a.code); (S.simAnns=S.simAnns||[]).push({k:a.k,dir:a.dir,lock:a.lock,live:!!a.live,held:!!S.hold[a.code],open:+(st.path[0]/st.prev-1).toFixed(4),close:+(st.price/st.prev-1).toFixed(4)}); });
   if(S.stress>=100){ S.collapsed=true; return true; }
   if(S.day>=DAYS) return true;
   const ev=pickEvent(); if(ev){ const ch=ev.choices[Math.floor(Math.random()*ev.choices.length)][0]; ev.fx(ch); S.stress=Math.max(0,Math.min(stressCap(),S.stress)); }
@@ -5079,15 +5198,15 @@ function simOne(key,seed){
     const curve=[]; let g=0;
     while(g++<40){ const done=simDay(st); curve.push(Math.round(S.stress)); if(done) break; }
     const net=netWorth();
-    return {key,seed,end:S.collapsed?"collapse":endKind(net/S.start-1),day:S.day,collapseDay:S.collapsed?S.day:null,liq:S.liqCount||0,bigBurn:S.bigBurn||null,
-      brokeDebt:brokeDebt(),net:Math.round(net),start:S.start,neg:net<0,owe:Math.round(borrowedAll()),curve,maxSt:Math.max(...curve)};
+    return {key,seed,end:endingKind(),day:S.day,collapseDay:S.collapsed?S.day:null,liq:S.liqCount||0,bigBurn:S.bigBurn||null,
+      brokeDebt:brokeDebt(),net:Math.round(net),start:S.start,neg:net<0,owe:Math.round(borrowedAll()),curve,maxSt:Math.max(...curve),anns:S.simAnns||[]};
   } finally { S=S0; timer=tm0; Math.random=R0; window.setTimeout=T0; window.setInterval=I0; window.requestAnimationFrame=A0; SIMQ=false; }
 }
 function simSummary(key,res){
   const n=res.length, cnt=k=>res.filter(r=>r.end===k).length, cd=res.filter(r=>r.collapseDay).map(r=>r.collapseDay).sort((a,b)=>a-b);
   const nets=res.map(r=>r.net).sort((a,b)=>a-b), med=a=>a.length?a[Math.floor((a.length-1)/2)]:null, avg=[];
   for(let d=0;d<DAYS;d++){ const v=res.filter(r=>r.curve.length>d).map(r=>r.curve[d]); avg.push(v.length?+(v.reduce((a,b)=>a+b,0)/v.length).toFixed(1):null); }
-  return {key,name:SIM_STRATS[key].name,n,ends:{win:cnt("win"),flat:cnt("flat"),loss:cnt("loss"),collapse:cnt("collapse")},collapseDays:cd,
+  return {key,name:SIM_STRATS[key].name,n,ends:{win:cnt("win"),flat:cnt("flat"),loss:cnt("loss"),collapse:cnt("collapse"),ruin:cnt("ruin"),quit:cnt("quit"),windfall:cnt("windfall")},collapseDays:cd,
     early:cd.filter(d=>d<BREAK_DAY).length, earlyBig:res.filter(r=>r.collapseDay&&r.collapseDay<BREAK_DAY&&r.bigBurn).length,
     liqAvg:+(res.reduce((a,r)=>a+r.liq,0)/n).toFixed(1), negN:res.filter(r=>r.neg).length, netMed:med(nets), start:res[0]&&res[0].start, avgCurve:avg, res}; }
 async function runSims(key,n,seed0,onProg){
@@ -5095,7 +5214,7 @@ async function runSims(key,n,seed0,onProg){
   return simSummary(key,res); }
 window.ssdsySim={runSims,simOne,simSummary,strats:SIM_STRATS};
 function simLine(sm){ const e=sm.ends, cd=sm.collapseDays;
-  return `<b>${sm.name}</b> · ${sm.n} 局：赚 ${e.win} · 持平 ${e.flat} · 亏 ${e.loss} · 崩溃 ${e.collapse}${cd.length?`（最早第 ${cd[0]} 天，中位第 ${cd[Math.floor((cd.length-1)/2)]} 天；第 17 天前 ${sm.early} 局${sm.early?`，其中大爆仓 ${sm.earlyBig} 局`:""}）`:""}<br>平均被强平 ${sm.liqAvg} 次 · 穿仓 ${sm.negN} 局 · 扣掉借款后净资产中位数 ${fmt(sm.netMed)}`; }
+  return `<b>${sm.name}</b> · ${sm.n} 局：赚 ${e.win} · 持平 ${e.flat} · 亏 ${e.loss} · 崩溃 ${e.collapse} · 悲惨 ${e.ruin} · 罢研 ${e.quit} · 横财 ${e.windfall}${cd.length?`（最早第 ${cd[0]} 天，中位第 ${cd[Math.floor((cd.length-1)/2)]} 天；第 17 天前 ${sm.early} 局${sm.early?`，其中大爆仓 ${sm.earlyBig} 局`:""}）`:""}<br>平均被强平 ${sm.liqAvg} 次 · 穿仓 ${sm.negN} 局 · 扣掉借款后净资产中位数 ${fmt(sm.netMed)}`; }
 function tpDo(t,v){
   if(t==="sim"){ tpSim(v); return; }
   if(!S||["intro","prologue"].includes(S.phase)){ toast("先开始游戏，进到第一天早上再用"); return; }
@@ -5142,15 +5261,28 @@ const TP_ACT={
   to:v=>{ const n=+v-S.day; if(n<=0){ toast(`已经是第 ${S.day} 天了`); return; } tpDays(n); },
   spd:v=>{ S.testSpd=+v; toast(`时间流速 ×${v}`); },
   cash:()=>{ S.cash+=10000; S.start+=10000; S.openEquity+=10000; toast("本金 +¥10,000（算进本金，不算赚的）"); },
-  loan:()=>{ S.installed.loan=true; const a=10000, get=Math.round(a*(1-LOAN_FEE)); S.loans.push({id:"L"+S.day+"_"+S.loans.length,amt:a,d:S.day,due:S.day+LOAN_DAYS,paid:false}); S.cash+=get; S.loanFees+=a-get; S.openEquity+=get; toast(`借了 ¥10,000，到手 ${fmt(get)}`); },
+  loan:()=>{ S.installed.loan=true; if(deepLoss()&&!S.ruinDay){ S.ruinDay=S.day; S.ruinLoss=lossNow(); } const a=10000, get=Math.round(a*(1-LOAN_FEE)); S.loans.push({id:"L"+S.day+"_"+S.loans.length,amt:a,d:S.day,due:S.day+LOAN_DAYS,paid:false}); S.cash+=get; S.loanFees+=a-get; S.openEquity+=get; toast(`借了 ¥10,000，到手 ${fmt(get)}`); },
   liq:()=>{ S.liqCount=(S.liqCount||0)+1; toast(`强平次数：${S.liqCount}`); },
   pz:v=>{ const lev=+v, eq=Math.max(0,equity()); if(eq<1000){ toast("账户不到 ¥1,000，签不了配资"); return; } S.installed.pz=true; S.installed.stock=true; S.pz={lev,rate:PZ_OPTS.find(x=>x.lev===lev).rate,d:S.day}; S.creditLine=eq*(lev-1); S.liqPending=false; S.liqSold=false; toast(`开了 ${lev} 倍配资，额度 ${fmt(S.creditLine)}`); },
   buy:()=>{ if(S.phase!=="market"){ toast("盘中才能买"); return; } S.installed.stock=true; S.accountOpen=true;
-    const cur=S.sel&&stock(S.sel), ok=s=>s&&!s.delisted&&!isLimUp(s); if(!ok(cur)) S.sel=(S.stocks.find(ok)||{}).code; trade("buy",1); },
+    const cur=S.sel&&stock(S.sel), ok=s=>s&&!s.delisted&&!isLimUp(s)&&!isLimDn(s)&&s.price*100*1.002<=buyingPower(); if(!ok(cur)) S.sel=(S.stocks.find(ok)||{}).code; trade("buy",1); },
   mv:v=>{ if(S.phase!=="market"){ toast("盘中才能改行情"); return; } const codes=Object.keys(S.hold); if(!codes.length){ toast("没有持仓"); return; }
-    codes.forEach(c=>{ const s=stock(c), lo=s.prev*0.8, hi=s.prev*1.2, px=v==="dn5"?s.price*0.95:v==="up5"?s.price*1.05:v==="limdn"?lo:hi;
+    codes.forEach(c=>{ const s=stock(c), lo=s.prev*0.8, hi=s.prev*1.2, px=v==="dn5"?s.price*0.95:v==="dn10"?s.price*0.9:v==="up5"?s.price*1.05:v==="limdn"?lo:hi;
       for(let i=S.minute+1;i<s.path.length;i++) s.path[i]=Math.max(lo,Math.min(hi,px)); });
-    toast(`持仓的股票下一分钟起：${{dn5:"跌 5%",up5:"涨 5%",limdn:"跌停封死",limup:"涨停"}[v]}`); },
+    toast(`持仓的股票下一分钟起：${{dn5:"跌 5%",dn10:"跌 10%",up5:"涨 5%",limdn:"跌停封死",limup:"涨停"}[v]}`); },
+  ann:v=>{ if(S.phase!=="market"){ toast("盘中才能发公告"); return; } const codes=Object.keys(S.hold); if(!codes.length){ toast("没有持仓"); return; }
+    const T=ANN_T.find(t=>t.k===v), m0=S.minute+1;
+    codes.forEach(c=>{ const st=stock(c), lo=st.prev*0.8, hi=st.prev*1.2, a={k:v,code:c,dir:T.dir,text:T.text(st),short:T.short,live:m0,lock:v==="probe"};
+      if(v==="probe"){ st.lockDown=2; for(let i=m0;i<st.path.length;i++) st.path[i]=lo; }
+      else { a.gap=(T.gap[0]+T.gap[1])/2; a.mu=(T.mu[0]+T.mu[1])/2; for(let i=m0;i<st.path.length;i++) st.path[i]=Math.max(lo,Math.min(hi,st.path[i]*(1+a.gap)*(1+a.mu*(i-m0)/MINUTES))); }
+      (S.annLive=S.annLive||[]).push(a); });
+    toast(`下一分钟，持仓的股票发布公告：${T.short}`); },
+  keep:v=>{ S.liqKeep=+v; toast(`平仓线：本金亏到只剩 ${Math.round(+v*100)}% 时强平`); },
+  endk:v=>{ closeSheet(); $("#ov").classList.remove("show"); clearTimeout(preTimer); clearTimeout(aucTimer); clearTimeout(afterTimer); clearTimeout(eveTimer); if(S.phase==="market") S.phase="after";
+    if(v==="ruin"){ S.ruinDay=S.day; S.ruined=true; if(lossNow()<RUIN_LOSS){ S.cash-=RUIN_LOSS+3000-lossNow(); } }
+    if(v==="quit"){ S.cash+=Math.max(0,12000-(netWorth()-S.start)); Object.keys(S.dayFocus).forEach(k=>S.dayFocus[k]=0); S.todayStudy=0; S.day=DAYS; }
+    if(v==="windfall"){ S.cash+=Math.max(0,230000-(netWorth()-S.start)); S.day=DAYS; }
+    showReport(); },
   st:()=>{ const v=+$("#tpSt").value; S.stress=v; S._stLast=v; toast(`压力设为 ${v}`); },
   end:()=>{ closeSheet(); $("#ov").classList.remove("show"); clearTimeout(preTimer); clearTimeout(aucTimer); clearTimeout(afterTimer); clearTimeout(eveTimer); if(S.phase==="market") S.phase="after"; showReport(); },
   collapse:()=>{ closeSheet(); $("#ov").classList.remove("show"); clearTimeout(preTimer); clearTimeout(aucTimer); clearTimeout(afterTimer); clearTimeout(eveTimer); if(S.phase==="market") S.phase="after"; S.stress=100; S.collapsed=true; showReport(); },
@@ -6460,7 +6592,7 @@ document.addEventListener("visibilitychange",()=>{ if(document.hidden && S.phase
 /* 先把图片包下载完（显示进度），再启动游戏。直接双击本地文件打开时，退回普通的 script 加载。 */
 (function(){
   "use strict";
-  var TOTAL=11377393, bar=document.getElementById("alBar"), pct=document.getElementById("alPct"), sub=document.getElementById("alSub");
+  var TOTAL=11839039, bar=document.getElementById("alBar"), pct=document.getElementById("alPct"), sub=document.getElementById("alSub");
   var started=false, got=0, lastGot=0, watch=0;
   function show(f){ var p=Math.max(0,Math.min(99,Math.floor(f*100))); bar.style.width=p+"%"; pct.textContent="正在加载画面 "+p+"%"; }
   function runGame(){
